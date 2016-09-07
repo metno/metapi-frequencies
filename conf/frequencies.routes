@@ -1,0 +1,7 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# MET API
+GET     /rainfallIDFs/v0.:format                 controllers.FrequenciesController.getRainfallIDFs(sources: Option[String], fields: Option[String], format: String)
+
