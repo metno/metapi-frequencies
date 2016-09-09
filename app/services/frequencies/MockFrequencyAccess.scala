@@ -33,6 +33,7 @@ import play.Logger
 @Singleton
 class MockFrequencyAccess extends FrequencyAccess("") {
 
+  // scalastyle:off magic.number
   val rainfallIDFs = List[RainfallIDF](
     new RainfallIDF(
       Some("SN18700"),
@@ -41,8 +42,26 @@ class MockFrequencyAccess extends FrequencyAccess("") {
       Some(42),
       Some("l/s*Ha"),
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
+    ),
+    new RainfallIDF(
+      Some("SN18701"),
+      Some(Point("Point", Seq(10.54, 60.1))),
+      Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
+      Some(42),
+      Some("l/s*Ha"),
+      Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
+    ),
+    new RainfallIDF(
+      Some("SN18702"),
+      Some(Point("Point", Seq(10.54, 60.1))),
+      Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
+      Some(42),
+      Some("l/s*Ha"),
+      Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     )
+
   )
+  // scalastyle:on
 
   def getRainfallIDFs(sources: List[String], fields: Set[String]): List[RainfallIDF] = {
     rainfallIDFs

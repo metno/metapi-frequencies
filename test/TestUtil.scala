@@ -33,8 +33,8 @@ import services.frequencies._
 object TestUtil {
 
   private def defaultConfig = {
-    Map(("play.http.router" -> "elements.Routes"),
-        ("play.application.loader" -> "modules.ElementsApplicationLoader"),
+    Map(("play.http.router" -> "frequencies.Routes"),
+        ("play.application.loader" -> "modules.FrequenciesApplicationLoader"),
         ("auth.active" -> "false"))
   }
 
