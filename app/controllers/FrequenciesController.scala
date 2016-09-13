@@ -64,7 +64,7 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
-    val sourceList = SourceSpecification.parse(sources.getOrElse(""))
+    val sourceList = if (sources.isEmpty) Seq[String]() else SourceSpecification.parse(sources.get)
     val fieldList : Set[String] = fields match {
         case Some(x) => x.toLowerCase.split(",").map(_.trim).toSet
         case _ => Set()
