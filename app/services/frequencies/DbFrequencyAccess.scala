@@ -33,6 +33,7 @@ import anorm.SqlParser._
 import java.sql.Connection
 import javax.inject.Singleton
 import scala.language.postfixOps
+import no.met.data.BadRequestException
 import models._
 
 //$COVERAGE-OFF$Not testing database queries
@@ -40,9 +41,9 @@ import models._
 class DbFrequencyAccess extends FrequencyAccess("") {
 
   val parser: RowParser[RainfallIDF] = {
-    get[Option[String]]("sourceId") ~
-    get[Option[Array[String]]]("operatingPeriods") ~
-    get[Option[Int]]("numberOfSeasons") ~
+    get[String]("sourceId") ~
+    get[Option[Array[String]]]("operatingperiods") ~
+    get[Option[Int]]("numberofseasons") ~
     get[Option[String]]("unit") ~
     get[Double]("intensity") ~
     get[Double]("duration") ~
@@ -50,14 +51,39 @@ class DbFrequencyAccess extends FrequencyAccess("") {
       case id~operatingPeriods~nSeasons~unit~intensity~duration~frequency
         => RainfallIDF(id,
                        None,
-                       Some(operatingPeriods.get.toSeq.sorted),
+                       if (operatingPeriods.isEmpty) {
+                         None
+                       } else {
+                         Some(operatingPeriods.get.toSeq.sorted)
+                       },
                        nSeasons,
                        unit,
                        Seq(IDFValue(intensity, duration, frequency)))
     }
   }
 
+  private def getSelectQuery(fields: Set[String]) : String = {
+    val legalFields = Set("operatingperiods", "numberofseasons", "unit")
+    val illegalFields = fields -- legalFields
+    if (!illegalFields.isEmpty) {
+      throw new BadRequestException("Invalid fields in the query parameter: " + illegalFields.mkString(","))
+    }
+    val fieldStr = "sourceid, intensity, duration, frequency, " + fields.mkString(", ")
+    val missing = legalFields -- fields
+    if (missing.isEmpty) {
+      fieldStr
+    } else {
+      val missingStr = missing
+        .map( x => "NULL AS " + x )
+        .mkString(", ")
+        .replace("NULL AS values", "NULL AS intensity, NULL AS duration, NULL AS frequency")
+      fieldStr + "," + missingStr
+    }
+  }
+
+
   def getRainfallIDFs(sources: Seq[String], fields: Set[String]): List[RainfallIDF] = {
+    val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
     val sourceList = sources.mkString(",")
     val sourceQ =
       if (sources.isEmpty)
@@ -66,34 +92,37 @@ class DbFrequencyAccess extends FrequencyAccess("") {
         s"stnr IN ($sourceList)"
     val query = s"""
                    |SELECT
-                     |'SN' || t3.stnr AS sourceId,
-                     |t3.operatingPeriods,
-                     |t3.nSeason AS numberOfSeasons,
-                     |'l/s*Ha' AS unit,
-                     |t4.litre_sec_hectar AS intensity,
-                     |t4.duration,
-                     |t4.returnperiod AS frequency
+                     |$selectQ
                    |FROM
-                     |(select
-                       |t1.stnr, t1.operatingPeriods, t2.nSeason
+                     |(SELECT
+                       |'SN' || t3.stnr AS sourceId,
+                       |t3.operatingPeriods,
+                       |t3.nSeason AS numberOfSeasons,
+                       |'l/s*Ha' AS unit,
+                       |t4.litre_sec_hectar AS intensity,
+                       |t4.duration,
+                       |t4.returnperiod AS frequency
                      |FROM
-                       |(SELECT
-                         |stnr, array_agg(TO_CHAR(fdato, 'YYYY-MM-DDT00:00:00Z') || '/' || TO_CHAR(tdato, 'YYYY-MM-DDT00:00:00Z')) AS operatingPeriods
+                       |(select
+                         |t1.stnr, t1.operatingPeriods, t2.nSeason
                        |FROM
-                         |t_elem_pdata
-                       |WHERE
-                         |$sourceQ
-                       |GROUP BY stnr) t1
-                     |LEFT OUTER JOIN
-                       |(SELECT
-                         |stnr, max(season) AS nSeason
-                       |FROM
-                         |t_rr_intensity
-                       |GROUP BY
-                         |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
-                   |WHERE t3.stnr = t4.stnr AND
-                         |t4.dependency_or_not = 'I'
-                   |ORDER BY sourceId, duration, frequency
+                         |(SELECT
+                           |stnr, array_agg(TO_CHAR(fdato, 'YYYY-MM-DDT00:00:00Z') || '/' || TO_CHAR(tdato, 'YYYY-MM-DDT00:00:00Z')) AS operatingPeriods
+                         |FROM
+                           |t_elem_pdata
+                         |WHERE
+                           |$sourceQ
+                         |GROUP BY stnr) t1
+                       |LEFT OUTER JOIN
+                         |(SELECT
+                           |stnr, max(season) AS nSeason
+                         |FROM
+                           |t_rr_intensity
+                         |GROUP BY
+                           |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
+                     |WHERE t3.stnr = t4.stnr AND
+                           |t4.dependency_or_not = 'I'
+                     |ORDER BY sourceId, duration, frequency) t5
       """.stripMargin
 
     Logger.debug(query)
@@ -101,6 +130,7 @@ class DbFrequencyAccess extends FrequencyAccess("") {
     DB.withConnection("kdvh") { implicit connection =>
       val sqlResult = SQL(query).as( parser * )
       // TODO: Quick and dirty implementation. Convert to idiomatic scala.
+      // List append is not an efficient implementation, so this needs to be improved.
       var result = List[RainfallIDF]()
       for (res <- sqlResult) {
         if (!result.isEmpty && result.last.sourceId == res.sourceId)
@@ -115,24 +145,6 @@ class DbFrequencyAccess extends FrequencyAccess("") {
 
   /*
 
-  def getSelectQuery(fields: Set[String]) : String = {
-    val legalFields = Set("id", "name", "description", "unit", "codetable", "legacymetnoconvention", "cfconvention")
-    val fieldStr = fields
-      .mkString(", ")
-      .replace("legacymetnoconvention", "array_to_string(legacymetnoconvention_elemcodes, ','), legacymetnoconvention_category, legacymetnoconvention_unit")
-      .replace("cfconvention", "cfconvention_standardname, cfconvention_cellmethod, cfconvention_unit, cfconvention_status")
-    val missing = legalFields -- fields
-    if (missing.isEmpty)
-      fieldStr
-    else {
-      val missingStr = missing
-        .map( x => "NULL AS " + x )
-        .mkString(", ")
-        .replace("NULL AS legacymetnoconvention", "NULL AS legacymetnoconvention_elemcodes, NULL AS legacymetnoconvention_category, NULL AS legacymetnoconvention_unit")
-        .replace("NULL AS cfconvention", "NULL AS cfconvention_standardname, NULL AS cfconvention_cellmethod, NULL AS cfconvention_unit, NULL AS cfconvention_status")
-      fieldStr + "," + missingStr
-    }
-  }
   */
 
 }

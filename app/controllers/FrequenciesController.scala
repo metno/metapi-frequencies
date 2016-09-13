@@ -55,7 +55,7 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
   def getRainfallIDFs( // scalastyle:ignore public.methods.have.type
     @ApiParam(value = "The MET API sourceID(s) that you want IDF data for. Enter a comma-separated list to select multiple sources.")
               sources: Option[String],
-    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,description will show only those two entries in the data set.")
+    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
     @ApiParam(value = "The output format of the result.",
               allowableValues = "jsonld",

@@ -36,7 +36,7 @@ class MockFrequencyAccess extends FrequencyAccess("") {
   // scalastyle:off magic.number
   val rainfallIDFs = List[RainfallIDF](
     new RainfallIDF(
-      Some("18700"),
+      "18700",
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -44,7 +44,7 @@ class MockFrequencyAccess extends FrequencyAccess("") {
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     ),
     new RainfallIDF(
-      Some("18701"),
+      "18701",
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -52,7 +52,7 @@ class MockFrequencyAccess extends FrequencyAccess("") {
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     ),
     new RainfallIDF(
-      Some("18702"),
+      "18702",
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -65,7 +65,7 @@ class MockFrequencyAccess extends FrequencyAccess("") {
 
   def getRainfallIDFs(sources: Seq[String], fields: Set[String]): List[RainfallIDF] = {
     rainfallIDFs
-      .filter (x => sources.length == 0 || sources.contains(x.sourceId.get.toUpperCase) )
+      .filter (x => sources.length == 0 || sources.contains(x.sourceId.toUpperCase) )
   }
 
 }
