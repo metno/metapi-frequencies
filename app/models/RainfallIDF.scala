@@ -58,12 +58,12 @@ case class RainfallIDF(
     @(ApiModelProperty @field)(value="Operating periods of the source.", example="[\"1974-05-29T12:00:00Z/1977-09-03T06:00:00Z\", \"1982-06-01T12:00:00/2016-09-08T12:00:00Z\"]") operatingPeriods: Option[Seq[String]],
     @(ApiModelProperty @field)(value="The number of seasons the source has been operational.", example="42") numberOfSeasons: Option[Int],
     @(ApiModelProperty @field)(value="The unit of measure for the intensity. The default unit is litre/second*Hectar.", example="l/s*Ha") unit: Option[String],
-    @(ApiModelProperty @field)(value="The values of the source and location.") values: Seq[IDFValue]
+    @(ApiModelProperty @field)(value="The values of the source and location.") var values: Seq[IDFValue]
 )
 
 @ApiModel(description="A single IDF value.")
 case class IDFValue(
-    @(ApiModelProperty @field)(value="Intensity.", example="322.8") intensity: Float,
-    @(ApiModelProperty @field)(value="Duration in minutes.", example="2") duration: Float,
+    @(ApiModelProperty @field)(value="Intensity.", example="322.8") intensity: Double,
+    @(ApiModelProperty @field)(value="Duration in minutes.", example="2") duration: Double,
     @(ApiModelProperty @field)(value="Frequency in years.", example="5") frequency: Int
 )

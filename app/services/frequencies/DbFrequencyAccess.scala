@@ -25,64 +25,96 @@
 
 package services.frequencies
 
+import play.api.Play.current
+import play.api._
+import play.api.db._
+import anorm._
+import anorm.SqlParser._
 import java.sql.Connection
 import javax.inject.Singleton
-
 import scala.language.postfixOps
-import no.met.geometry.Point
 import models._
 
 //$COVERAGE-OFF$Not testing database queries
 @Singleton
 class DbFrequencyAccess extends FrequencyAccess("") {
 
-  val rainfallIDFs = List[RainfallIDF](
-    new RainfallIDF(
-      Some("SN18700"),
-      Some(Point("Point", Seq(10.54, 60.1))),
-      Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
-      Some(42),
-      Some("l/s*Ha"),
-      Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
-    )
-  )
+  val parser: RowParser[RainfallIDF] = {
+    get[Option[String]]("sourceId") ~
+    get[Option[Array[String]]]("operatingPeriods") ~
+    get[Option[Int]]("numberOfSeasons") ~
+    get[Option[String]]("unit") ~
+    get[Double]("intensity") ~
+    get[Double]("duration") ~
+    get[Int]("frequency") map {
+      case id~operatingPeriods~nSeasons~unit~intensity~duration~frequency
+        => RainfallIDF(id,
+                       None,
+                       Some(operatingPeriods.get.toSeq.sorted),
+                       nSeasons,
+                       unit,
+                       Seq(IDFValue(intensity, duration, frequency)))
+    }
+  }
 
-  def getRainfallIDFs(sources: List[String], fields: Set[String]): List[RainfallIDF] = {
-    rainfallIDFs
-      .filter (x => sources.length == 0 || sources.contains(x.sourceId.get.toUpperCase) )
+  def getRainfallIDFs(sources: Seq[String], fields: Set[String]): List[RainfallIDF] = {
+    val sourceList = sources.mkString(",")
+    val sourceQ =
+      if (sources.isEmpty)
+        "TRUE"
+      else
+        s"stnr IN ($sourceList)"
+    val query = s"""
+                   |SELECT
+                     |'SN' || t3.stnr AS sourceId,
+                     |t3.operatingPeriods,
+                     |t3.nSeason AS numberOfSeasons,
+                     |'l/s*Ha' AS unit,
+                     |t4.litre_sec_hectar AS intensity,
+                     |t4.duration,
+                     |t4.returnperiod AS frequency
+                   |FROM
+                     |(select
+                       |t1.stnr, t1.operatingPeriods, t2.nSeason
+                     |FROM
+                       |(SELECT
+                         |stnr, array_agg(TO_CHAR(fdato, 'YYYY-MM-DDT00:00:00Z') || '/' || TO_CHAR(tdato, 'YYYY-MM-DDT00:00:00Z')) AS operatingPeriods
+                       |FROM
+                         |t_elem_pdata
+                       |WHERE
+                         |$sourceQ
+                       |GROUP BY stnr) t1
+                     |LEFT OUTER JOIN
+                       |(SELECT
+                         |stnr, max(season) AS nSeason
+                       |FROM
+                         |t_rr_intensity
+                       |GROUP BY
+                         |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
+                   |WHERE t3.stnr = t4.stnr AND
+                         |t4.dependency_or_not = 'I'
+                   |ORDER BY sourceId, duration, frequency
+      """.stripMargin
+
+    Logger.debug(query)
+
+    DB.withConnection("kdvh") { implicit connection =>
+      val sqlResult = SQL(query).as( parser * )
+      // TODO: Quick and dirty implementation. Convert to idiomatic scala.
+      var result = List[RainfallIDF]()
+      for (res <- sqlResult) {
+        if (!result.isEmpty && result.last.sourceId == res.sourceId)
+          result.last.values = result.last.values ++ res.values
+        else
+          result = result :+ res
+      }
+      result
+    }
+
   }
 
   /*
-  val parser: RowParser[Element] = {
-    get[Option[String]]("id") ~
-    get[Option[String]]("name") ~
-    get[Option[String]]("description") ~
-    get[Option[String]]("unit") ~
-    get[Option[String]]("codetable") ~
-    get[Option[Array[String]]]("legacymetnoconvention_elemcodes") ~
-    get[Option[String]]("legacymetnoconvention_category") ~
-    get[Option[String]]("legacymetnoconvention_unit") ~
-    get[Option[String]]("cfconvention_standardname") ~
-    get[Option[String]]("cfconvention_cellmethod") ~
-    get[Option[String]]("cfconvention_unit") ~
-    get[Option[String]]("cfconvention_status") map {
-      case id~name~desc~unit~codeTable~kdvhCodes~kdvhCategory~kdvhUnit~cfName~cfMethod~cfUnit~cfStatus 
-        => Element(id,
-                  name,
-                  desc,
-                  unit,
-                  codeTable,
-                  if (kdvhCodes.isEmpty)
-                    None
-                  else
-                    Some(LegacyMetNoConvention(Some(kdvhCodes.get.toSeq.sorted), kdvhCategory, kdvhUnit)),
-                  if (cfName.isEmpty)
-                    None
-                  else
-                    Some(CfConvention(cfName, cfMethod, cfUnit, cfStatus)))
-    }
-  }
-  
+
   def getSelectQuery(fields: Set[String]) : String = {
     val legalFields = Set("id", "name", "description", "unit", "codetable", "legacymetnoconvention", "cfconvention")
     val fieldStr = fields
@@ -99,58 +131,6 @@ class DbFrequencyAccess extends FrequencyAccess("") {
         .replace("NULL AS legacymetnoconvention", "NULL AS legacymetnoconvention_elemcodes, NULL AS legacymetnoconvention_category, NULL AS legacymetnoconvention_unit")
         .replace("NULL AS cfconvention", "NULL AS cfconvention_standardname, NULL AS cfconvention_cellmethod, NULL AS cfconvention_unit, NULL AS cfconvention_status")
       fieldStr + "," + missingStr
-    }
-  }
-  
-
-  def getRainfallIDFs(ids: List[String], elemCodes: List[String], cfNames: List[String], fields: Set[String], lang: Option[String]): List[Element] = {
-    Logger.debug(fields.isEmpty.toString)
-    // Set up projection clause based on fields
-    val selectQ = 
-      if (fields.isEmpty)
-        "id, name, description, unit, codetable, legacymetnoconvention_elemcodes, legacymetnoconvention_category, legacymetnoconvention_unit, cfconvention_standardname, cfconvention_cellmethod, cfconvention_unit, cfconvention_status" 
-      else
-        getSelectQuery(fields)
-    // Filter for selected ids
-    val idList = ids.mkString("','")
-    val idQ =
-      if (ids.isEmpty)
-        "id IS NOT NULL"
-      else
-        s"LOWER(id) IN ('$idList')"
-    // Filter for selected legacy codes
-    val elemList = elemCodes.mkString("','")
-    val elemQ =
-      if (elemCodes.isEmpty)
-        "TRUE"
-      else
-        s"legacymetnoconvention_elemcodes && ARRAY['$elemList']"
-    // Filter for selected standard names
-    val cfList = cfNames.mkString("','")
-    val cfQ =
-      if (cfNames.isEmpty)
-        "TRUE"
-      else
-        s"cfconvention_standardname IN ('$cfList')"
-    // Filter for Locale
-    val localeQ = "locale = '" + lang.getOrElse("en-US") + "'";
-    
-    val query = s"""
-      |SELECT
-        |$selectQ
-      |FROM
-        |get_elements_v
-      |WHERE
-        |$idQ AND
-        |$elemQ AND
-        |$cfQ AND
-        |$localeQ
-      """.stripMargin
-
-    Logger.debug(query)
-
-    DB.withConnection("elements") { implicit connection =>
-      SQL(query).as( parser * )
     }
   }
   */
