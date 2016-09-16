@@ -33,7 +33,7 @@ import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
 import util._
-import no.met.data.SourceSpecification
+import no.met.data.{SourceSpecification, FieldSpecification}
 import models.RainfallIDF
 import services.frequencies.{FrequencyAccess, RainfallIDFJsonFormat}
 
@@ -64,11 +64,8 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
-    val sourceList = if (sources.isEmpty) Seq[String]() else SourceSpecification.parse(sources.get)
-    val fieldList : Set[String] = fields match {
-        case Some(x) => x.toLowerCase.split(",").map(_.trim).toSet
-        case _ => Set()
-    }
+    val sourceList = SourceSpecification.parse(sources)
+    val fieldList = FieldSpecification.parse(fields)
     Try  {
       frequencyService.getRainfallIDFs(sourceList, fieldList)
     } match {
