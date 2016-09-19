@@ -3,5 +3,5 @@
 # ~~~~
 
 # MET API
-GET     /rainfallIDFs/v0.:format                 controllers.FrequenciesController.getRainfallIDFs(sources: Option[String], fields: Option[String], format: String)
+GET     /rainfallIDFs/v0.:format                 controllers.FrequenciesController.getRainfallIDFs(sources: Option[String], durations: Option[String], fields: Option[String], format: String)
 
