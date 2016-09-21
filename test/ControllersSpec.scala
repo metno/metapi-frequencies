@@ -44,13 +44,13 @@ class ControllersSpec extends Specification {
 
   "metapi /frequencies/rainfallIDF" should {
 
-    "return a result with no query parameters in the route" in new WithApplication(TestUtil.app) {
+    "test an empty query string" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld")).get
 
       status(response) must equalTo(OK)
     }
 
-    "return a result with a source in the route" in new WithApplication(TestUtil.app) {
+    "test a single source" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?sources=SN18700")).get
 
       status(response) must equalTo(OK)
@@ -60,7 +60,7 @@ class ControllersSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(1)
     }
 
-    "return a result with a source in the route" in new WithApplication(TestUtil.app) {
+    "test a single source and a single, unsupported field" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?sources=SN18700&fields=dummy")).get
 
       status(response) must equalTo(OK)
@@ -70,7 +70,7 @@ class ControllersSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(1)
     }
 
-    "return a result with a list of ids in the route" in new WithApplication(TestUtil.app) {
+    "test two sources" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?sources=SN18700,SN18701")).get
 
       status(response) must equalTo(OK)
@@ -79,13 +79,31 @@ class ControllersSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(2)
     }
 
-    "return 404 Not Found" in new WithApplication(TestUtil.app) {
+    "test single duration" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?durations=20")).get
+
+      status(response) must equalTo(OK)
+    }
+
+    "test malformed durations" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?durations=20,foo,30")).get
+
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "test unsupported durations" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?durations=123456")).get
+
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "test unsupported source" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?sources=SN00000")).get
 
       status(response) must equalTo(NOT_FOUND)
     }
 
-    "return 400 Bad Request" in new WithApplication(TestUtil.app) {
+    "test unsupported format" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonldx")).get
 
       status(response) must equalTo(BAD_REQUEST)
