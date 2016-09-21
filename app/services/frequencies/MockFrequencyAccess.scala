@@ -63,7 +63,7 @@ class MockFrequencyAccess extends FrequencyAccess("") {
   )
   // scalastyle:on
 
-  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], fields: Set[String]): List[RainfallIDF] = {
+  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], fields: Set[String]): List[RainfallIDF] = {
     rainfallIDFs
       .filter (x => sources.length == 0 || sources.contains(x.sourceId.toUpperCase) )
   }

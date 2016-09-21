@@ -81,9 +81,8 @@ class DbFrequencyAccess extends FrequencyAccess("") {
     }
   }
 
-
-// scalastyle:off method.length
-  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], fields: Set[String]): List[RainfallIDF] = {
+  // scalastyle:off method.length
+  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], fields: Set[String]): List[RainfallIDF] = {
 
     val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -100,6 +99,14 @@ class DbFrequencyAccess extends FrequencyAccess("") {
       } else {
         s" AND t4.duration IN (${durations.mkString(",")})"
       }
+
+    val frequenciesQ =
+      if (frequencies.isEmpty) {
+        ""
+      } else {
+        s" AND t4.returnperiod IN (${frequencies.mkString(",")})"
+      }
+
 
     val query = s"""
                    |SELECT
@@ -134,6 +141,7 @@ class DbFrequencyAccess extends FrequencyAccess("") {
                      |WHERE t3.stnr = t4.stnr AND
                            |t4.dependency_or_not = 'I'
                            |$durationsQ
+                           |$frequenciesQ
                      |ORDER BY sourceId, duration, frequency) t5
       """.stripMargin
 

@@ -35,7 +35,7 @@ import scala.language.postfixOps
 import util._
 import no.met.data.{SourceSpecification, FieldSpecification}
 import models.RainfallIDF
-import services.frequencies.{FrequencyAccess, RainfallIDFJsonFormat, IDFDurationSpecification}
+import services.frequencies.{FrequencyAccess, RainfallIDFJsonFormat, IDFDurationSpecification, FrequencySpecification}
 
 // scalastyle:off magic.number
 
@@ -57,34 +57,36 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
               sources: Option[String],
     @ApiParam(value = "The MET API IDF duration(s) that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
+    @ApiParam(value = "The MET API IDF frequencies (return periods) that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
+              frequencies: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
     @ApiParam(value = "The output format of the result.",
               allowableValues = "jsonld",
               defaultValue = "jsonld")
-              format: String) = no.met.security.AuthorizedAction {
-    implicit request =>
+              format: String) = no.met.security.AuthorizedAction { implicit request =>
 
-      // Start the clock
-      val start = DateTime.now(DateTimeZone.UTC)
-      val sourceList = SourceSpecification.parse(sources)
-      val fieldList = FieldSpecification.parse(fields)
+    // Start the clock
+    val start = DateTime.now(DateTimeZone.UTC)
+    val sourceList = SourceSpecification.parse(sources)
+    val fieldList = FieldSpecification.parse(fields)
 
-      Try  {
-        val durationList = IDFDurationSpecification.parse(durations)
-        frequencyService.getRainfallIDFs(sourceList, durationList, fieldList)
-      } match {
-        case Success(data) =>
-          if (data isEmpty) {
-            NotFound("Could not find any rainfall IDF data for source ids " + sources.getOrElse("<all>"))
-          } else {
-            format.toLowerCase() match {
-              case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf-v0+json"
-              case x        => BadRequest(s"Invalid output format: $x")
-            }
+    Try  {
+      val durationList = IDFDurationSpecification.parse(durations)
+      val frequencyList = FrequencySpecification.parse(frequencies)
+      frequencyService.getRainfallIDFs(sourceList, durationList, frequencyList, fieldList)
+    } match {
+      case Success(data) =>
+        if (data isEmpty) {
+          NotFound("Could not find any rainfall IDF data for source ids " + sources.getOrElse("<all>"))
+        } else {
+          format.toLowerCase() match {
+            case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf-v0+json"
+            case x        => BadRequest(s"Invalid output format: $x")
           }
-        case Failure(x) => BadRequest(x getLocalizedMessage)
-      }
+        }
+      case Failure(x) => BadRequest(x getLocalizedMessage)
+    }
   }
 
 }
