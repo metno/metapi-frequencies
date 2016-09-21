@@ -79,7 +79,7 @@ class ControllersSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(2)
     }
 
-    "test single duration" in new WithApplication(TestUtil.app) {
+    "test a single duration" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?durations=20")).get
 
       status(response) must equalTo(OK)
@@ -97,13 +97,31 @@ class ControllersSpec extends Specification {
       status(response) must equalTo(BAD_REQUEST)
     }
 
-    "test unsupported source" in new WithApplication(TestUtil.app) {
+    "test a single frequency" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?frequencies=20")).get
+
+      status(response) must equalTo(OK)
+    }
+
+    "test malformed frequencies" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?frequencies=20,foo,25")).get
+
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "test unsupported frequencies" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?frequencies=123456")).get
+
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "test an unsupported source" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?sources=SN00000")).get
 
       status(response) must equalTo(NOT_FOUND)
     }
 
-    "test unsupported format" in new WithApplication(TestUtil.app) {
+    "test an unsupported format" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonldx")).get
 
       status(response) must equalTo(BAD_REQUEST)
