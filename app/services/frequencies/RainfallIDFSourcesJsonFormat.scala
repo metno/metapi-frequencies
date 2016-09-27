@@ -35,16 +35,14 @@ import no.met.json.BasicJsonFormat
 import models._
 
 /**
- * Creating a json representation of rainfall IDF data
+ * Creating a json representation of rainfall IDF sources data
  */
-class RainfallIDFJsonFormat extends BasicJsonFormat {
+class RainfallIDFSourcesJsonFormat extends BasicJsonFormat {
 
-  implicit val idfValueWrites = Json.writes[IDFValue]
+  implicit val rainfallIDFSourceWrites = Json.writes[RainfallIDFSource]
 
-  implicit val rainfallIDFWrites = Json.writes[RainfallIDF]
-
-  implicit val rainfallIDFResponseWrites: Writes[RainfallIDFResponse] = (
-    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and 
+  implicit val rainfallIDFSourcesResponseWrites: Writes[RainfallIDFSourcesResponse] = (
+    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and
     (JsPath \ ApiConstants.OBJECT_TYPE_NAME).write[String] and
     (JsPath \ ApiConstants.API_VERSION_NAME).write[String] and
     (JsPath \ ApiConstants.LICENSE_NAME).write[URL] and
@@ -57,21 +55,21 @@ class RainfallIDFJsonFormat extends BasicJsonFormat {
     (JsPath \ ApiConstants.NEXT_LINK_NAME).writeNullable[URL] and
     (JsPath \ ApiConstants.PREVIOUS_LINK_NAME).writeNullable[URL] and
     (JsPath \ ApiConstants.CURRENT_LINK_NAME).write[URL] and
-    (JsPath \ ApiConstants.DATA_NAME).write[Seq[RainfallIDF]]
-  )(unlift(RainfallIDFResponse.unapply))
+    (JsPath \ ApiConstants.DATA_NAME).write[Seq[RainfallIDFSource]]
+  )(unlift(RainfallIDFSourcesResponse.unapply))
 
   /**
    * Create json representation of the given list
    * @param start Start time of the query processing.
-   * @param idfs The list to create a representation of.
+   * @param sources The list to create a representation of.
    * @return json representation, as a string
    */
-  def format[A](start: DateTime, idfs: List[RainfallIDF])(implicit request: Request[A]): String = {
-    val size = idfs.size
+  def format[A](start: DateTime, sources: List[RainfallIDFSource])(implicit request: Request[A]): String = {
+    val size = sources.size
     val duration = new Duration(DateTime.now.getMillis() - start.getMillis())
-    val response = new RainfallIDFResponse(
+    val response = new RainfallIDFSourcesResponse(
       new URL(ApiConstants.METAPI_CONTEXT),
-      "RainfallIDFResponse",
+      "RainfallIDFSourcesResponse",
       "v0",
       new URL(ApiConstants.METAPI_LICENSE),
       start,
@@ -83,8 +81,7 @@ class RainfallIDFJsonFormat extends BasicJsonFormat {
       None,
       None,
       new URL(ConfigUtil.urlStart + request.uri),
-      idfs)
+      sources)
     Json.prettyPrint(Json.toJson(response))
   }
-  
 }

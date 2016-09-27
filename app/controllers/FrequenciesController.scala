@@ -35,9 +35,10 @@ import scala.language.postfixOps
 import util._
 import no.met.data.{SourceSpecification, FieldSpecification}
 import models.RainfallIDF
-import services.frequencies.{FrequencyAccess, RainfallIDFJsonFormat, IDFDurationSpecification, FrequencySpecification}
+import services.frequencies._
 
 // scalastyle:off magic.number
+// scalastyle:off line.size.limit
 
 @Api(value = "frequencies")
 class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends Controller {
@@ -68,10 +69,10 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
 
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
-    val sourceList = SourceSpecification.parse(sources)
     val fieldList = FieldSpecification.parse(fields)
 
     Try  {
+      val sourceList = SourceSpecification.parse(sources)
       val durationList = IDFDurationSpecification.parse(durations)
       val frequencyList = FrequencySpecification.parse(frequencies)
       frequencyService.getRainfallIDFs(sourceList, durationList, frequencyList, fieldList)
@@ -87,6 +88,46 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
         }
       case Failure(x) => BadRequest(x getLocalizedMessage)
     }
+  }
+
+  @ApiOperation(
+    value = "Get available sources for rainfall IDF data.",
+    notes = "Get available sources for rainfall IDF data. To be expanded.",
+    response = classOf[models.RainfallIDFSourcesResponse],
+    httpMethod = "GET")
+  @ApiResponses(Array(
+    new ApiResponse(code = 400, message = "Invalid parameter value or malformed request."),
+    new ApiResponse(code = 401, message = "Unauthorized client ID."),
+    new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
+    new ApiResponse(code = 500, message = "Internal server error.")))
+  def getRainfallIDFSources( // scalastyle:ignore public.methods.have.type
+                       @ApiParam(value = "A comma-separated list of MET API sourceIDs that you want information for. If left out, information for all available sources is returned.")
+                       sources: Option[String],
+                       @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId attribute will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
+                       fields: Option[String],
+                       @ApiParam(value = "The output format of the result.",
+                         allowableValues = "jsonld",
+                         defaultValue = "jsonld")
+                       format: String) = no.met.security.AuthorizedAction {
+    implicit request =>
+      // Start the clock
+      val start = DateTime.now(DateTimeZone.UTC)
+      val fieldList = FieldSpecification.parse(fields)
+      Try  {
+        val sourceList = SourceSpecification.parse(sources)
+        frequencyService.getRainfallIDFSources(sourceList, fieldList)
+      } match {
+        case Success(data) =>
+          if (data isEmpty) {
+            NotFound("Could not find any information for source ids " + sources.getOrElse("<all>"))
+          } else {
+            format.toLowerCase() match {
+              case "jsonld" => Ok(new RainfallIDFSourcesJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf.availablesources-v0+json"
+              case x        => BadRequest(s"Invalid output format: $x")
+            }
+          }
+        case Failure(x) => BadRequest(x getLocalizedMessage)
+      }
   }
 
 }
