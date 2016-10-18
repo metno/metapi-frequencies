@@ -66,7 +66,9 @@ object RainfallIDFs {
     val legalFields = Set("operatingperiods", "numberofseasons", "unit")
     val illegalFields = fields -- legalFields
     if (!illegalFields.isEmpty) {
-      throw new BadRequestException("Invalid fields in the query parameter: " + illegalFields.mkString(","))
+      throw new BadRequestException(
+        "Invalid fields in the query parameter: " + illegalFields.mkString(","),
+        Some(s"Supported fields: ${legalFields.mkString(", ")}"))
     }
     val fieldStr = "sourceid, intensity, duration, frequency, " + fields.mkString(", ")
     val missing = legalFields -- fields
@@ -182,7 +184,9 @@ object RainfallIDFSources {
     val legalFields = Set("validfrom", "validto", "numberofseasons")
     val illegalFields = fields -- legalFields
     if (!illegalFields.isEmpty) {
-      throw new BadRequestException("Invalid fields in the query parameter: " + illegalFields.mkString(","))
+      throw new BadRequestException(
+        "Invalid fields in the query parameter: " + illegalFields.mkString(","),
+        Some(s"Supported fields: ${legalFields.mkString(", ")}"))
     }
     val fieldStr = "sourceid, " + fields.mkString(", ")
     val missing = legalFields -- fields

@@ -33,12 +33,9 @@ import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
 import util._
-import no.met.data.{SourceSpecification, FieldSpecification}
+import no.met.data._
 import models.RainfallIDF
 import services.frequencies._
-
-// scalastyle:off magic.number
-// scalastyle:off line.size.limit
 
 @Api(value = "frequencies")
 class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends Controller {
@@ -67,8 +64,7 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
               defaultValue = "jsonld")
               format: String) = no.met.security.AuthorizedAction { implicit request =>
 
-    // Start the clock
-    val start = DateTime.now(DateTimeZone.UTC)
+    val start = DateTime.now(DateTimeZone.UTC) // start the clock
     val fieldList = FieldSpecification.parse(fields)
 
     Try  {
@@ -79,14 +75,20 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     } match {
       case Success(data) =>
         if (data isEmpty) {
-          NotFound("Could not find any rainfall IDF data for source ids " + sources.getOrElse("<all>"))
+          Error.error(NOT_FOUND,
+            Some("Could not find rainfall IDF data for any of the source ids"),
+            Some("Ensure that rainfall IDF data exists for at least one source id"),
+            start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf-v0+json"
-            case x        => BadRequest(s"Invalid output format: $x")
+            case x        => Error.error(BAD_REQUEST, Some(s"Invalid output format: $x"), Some("Supported output formats: jsonld"), start)
           }
         }
-      case Failure(x) => BadRequest(x getLocalizedMessage)
+      case Failure(x: BadRequestException) =>
+        Error.error(BAD_REQUEST, Some(x getLocalizedMessage), x help, start)
+      case Failure(x) =>
+        Error.error(BAD_REQUEST, Some(x getLocalizedMessage), None, start)
     }
   }
 
@@ -110,8 +112,7 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
                          defaultValue = "jsonld")
                        format: String) = no.met.security.AuthorizedAction {
     implicit request =>
-      // Start the clock
-      val start = DateTime.now(DateTimeZone.UTC)
+      val start = DateTime.now(DateTimeZone.UTC) // start the clock
       val fieldList = FieldSpecification.parse(fields)
       Try  {
         val sourceList = SourceSpecification.parse(sources)
@@ -119,17 +120,20 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
       } match {
         case Success(data) =>
           if (data isEmpty) {
-            NotFound("Could not find any information for source ids " + sources.getOrElse("<all>"))
+            Error.error(NOT_FOUND,
+              Some("No information found for any of the source ids"),
+              Some("Ensure that information exists for at least one source id"), start)
           } else {
             format.toLowerCase() match {
               case "jsonld" => Ok(new RainfallIDFSourcesJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf.availablesources-v0+json"
-              case x        => BadRequest(s"Invalid output format: $x")
+              case x        => Error.error(BAD_REQUEST, Some(s"Invalid output format: $x"), Some("Supported output formats: jsonld"), start)
             }
           }
-        case Failure(x) => BadRequest(x getLocalizedMessage)
+        case Failure(x: BadRequestException) =>
+          Error.error(BAD_REQUEST, Some(x getLocalizedMessage), x help, start)
+        case Failure(x) =>
+          Error.error(BAD_REQUEST, Some(x getLocalizedMessage), None, start)
       }
   }
 
 }
-
-// scalastyle:on
