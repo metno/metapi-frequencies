@@ -68,6 +68,9 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     val fieldList = FieldSpecification.parse(fields)
 
     Try  {
+      // ensure that the query string contains supported fields only
+      QueryStringUtil.ensureSubset(Set("sources", "durations", "frequencies", "fields"), request.queryString.keySet)
+
       val sourceList = SourceSpecification.parse(sources)
       val durationList = IDFDurationSpecification.parse(durations)
       val frequencyList = FrequencySpecification.parse(frequencies)
@@ -115,6 +118,9 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
       val start = DateTime.now(DateTimeZone.UTC) // start the clock
       val fieldList = FieldSpecification.parse(fields)
       Try  {
+        // ensure that the query string contains supported fields only
+        QueryStringUtil.ensureSubset(Set("sources", "fields"), request.queryString.keySet)
+
         val sourceList = SourceSpecification.parse(sources)
         frequencyService.getRainfallIDFSources(sourceList, fieldList)
       } match {
