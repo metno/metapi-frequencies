@@ -139,16 +139,22 @@ class ControllersSpec extends Specification {
       status(response) must equalTo(BAD_REQUEST)
     }
 
-    "test unsupported field" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfallIDFs/availableSources/v0.jsonld?fields=foo")).get
+    "test unsupported field value" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?fields=foo")).get
 
       status(response) must equalTo(OK)
     }
 
-    "test malformed field" in new WithApplication(TestUtil.app) {
+    "test malformed field value" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/availableSources/v0.jsonld?fields=(~")).get
 
       status(response) must equalTo(OK)
+    }
+
+    "test unsupported field name" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/v0.jsonld?foo=bar")).get
+
+      status(response) must equalTo(BAD_REQUEST)
     }
 
   }
@@ -191,16 +197,22 @@ class ControllersSpec extends Specification {
       status(response) must equalTo(BAD_REQUEST)
     }
 
-    "test unsupported field" in new WithApplication(TestUtil.app) {
+    "test unsupported field value" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/availableSources/v0.jsonld?fields=foo")).get
 
       status(response) must equalTo(OK)
     }
 
-    "test malformed field" in new WithApplication(TestUtil.app) {
+    "test malformed field value" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/rainfallIDFs/availableSources/v0.jsonld?fields=(~")).get
 
       status(response) must equalTo(OK)
+    }
+
+    "test unsupported field name" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfallIDFs/availableSources/v0.jsonld?foo=bar")).get
+
+      status(response) must equalTo(BAD_REQUEST)
     }
 
   }
