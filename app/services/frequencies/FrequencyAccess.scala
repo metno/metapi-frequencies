@@ -32,7 +32,7 @@ import models.{RainfallIDF, RainfallIDFSource}
  */
 abstract class FrequencyAccess(val url: String) {
 
-  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], fields: Set[String]) : List[RainfallIDF]
+  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], unit: Option[String], fields: Set[String]) : List[RainfallIDF]
   def getRainfallIDFSources(sources: Seq[String], fields: Set[String]) : List[RainfallIDFSource]
 
 }

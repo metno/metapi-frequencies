@@ -84,7 +84,8 @@ object RainfallIDFs {
   }
 
   // scalastyle:off method.length
-  def getResult(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], fields: Set[String]): List[RainfallIDF] = {
+  // scalastyle:off cyclomatic.complexity
+  def getResult(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], unit: Option[String], fields: Set[String]): List[RainfallIDF] = {
 
     val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -109,6 +110,23 @@ object RainfallIDFs {
         s" AND t4.returnperiod IN (${frequencies.mkString(",")})"
       }
 
+    val lsha = Array("l/s*Ha", "t4.litre_sec_hectar")
+    // the formula below is derived as follows:
+    //   l/s*Ha = lsh = litres per second per hectar
+    //   lmh = litres per minute per hectar = lsh * 60
+    //   lmd = litres per minute per square decimeter = lmh / 100000
+    //   mmm = millilitres per minute = lmd * 100 = lmh / 10000 = lsh * 60 / 10000 = lsh * 0.006
+    val mm = Array("mm", "t4.litre_sec_hectar * 0.006")
+    val unitQ = unit match {
+      case None => lsha
+      case Some(x) if x == "l/s*Ha" => lsha
+      case Some(x) if x == "mm" => mm
+      case _ => {
+        throw new BadRequestException(
+          "Invalid intensity unit: " + unit.get,
+          Some(s"Supported units: 'mm' and 'l/s_Ha'"))
+      }
+    }
 
     val query = s"""
                    |SELECT
@@ -118,8 +136,8 @@ object RainfallIDFs {
                        |'SN' || t3.stnr AS sourceId,
                        |t3.operatingPeriods,
                        |t3.nSeason AS numberOfSeasons,
-                       |'l/s*Ha' AS unit,
-                       |t4.litre_sec_hectar AS intensity,
+                       |'${unitQ(0)}' AS unit,
+                       |${unitQ(1)} AS intensity,
                        |t4.duration,
                        |t4.returnperiod AS frequency
                      |FROM
@@ -262,8 +280,8 @@ object RainfallIDFSources {
 @Singleton
 class DbFrequencyAccess extends FrequencyAccess("") {
 
-  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], fields: Set[String]): List[RainfallIDF] = {
-    RainfallIDFs.getResult(sources, durations, frequencies, fields)
+  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], unit: Option[String], fields: Set[String]): List[RainfallIDF] = {
+    RainfallIDFs.getResult(sources, durations, frequencies, unit, fields)
   }
 
   def getRainfallIDFSources(sources: Seq[String], fields: Set[String]): List[RainfallIDFSource] = {

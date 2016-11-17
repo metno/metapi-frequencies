@@ -57,6 +57,8 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
               durations: Option[String],
     @ApiParam(value = "The MET API IDF frequencies (return periods) that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
               frequencies: Option[String],
+    @ApiParam(value = "The unit of measure for the intensity. Specify 'mm' for millimetres per minute or 'l/s*Ha' for litres per second per hectar (default).")
+              unit: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
     @ApiParam(value = "The output format of the result.",
@@ -69,12 +71,12 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
 
     Try  {
       // ensure that the query string contains supported fields only
-      QueryStringUtil.ensureSubset(Set("sources", "durations", "frequencies", "fields"), request.queryString.keySet)
+      QueryStringUtil.ensureSubset(Set("sources", "durations", "frequencies", "unit", "fields"), request.queryString.keySet)
 
       val sourceList = SourceSpecification.parse(sources)
       val durationList = IDFDurationSpecification.parse(durations)
       val frequencyList = FrequencySpecification.parse(frequencies)
-      frequencyService.getRainfallIDFs(sourceList, durationList, frequencyList, fieldList)
+      frequencyService.getRainfallIDFs(sourceList, durationList, frequencyList, unit, fieldList)
     } match {
       case Success(data) =>
         if (data isEmpty) {
