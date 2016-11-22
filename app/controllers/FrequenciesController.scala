@@ -53,12 +53,14 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
   def getRainfallIDFs( // scalastyle:ignore public.methods.have.type
     @ApiParam(value = "The MET API sourceID(s) that you want IDF data for. Enter a comma-separated list to select multiple sources.")
               sources: Option[String],
-    @ApiParam(value = "The MET API IDF duration(s) that you want IDF data for. Enter a comma-separated list to select multiple durations.")
+    @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
-    @ApiParam(value = "The MET API IDF frequencies (return periods) that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
+// scalastyle:off line.size.limit
+    @ApiParam(value = "The MET API IDF frequencies (return periods), in years, that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
               frequencies: Option[String],
-    @ApiParam(value = "The unit of measure for the intensity. Specify 'mm' for millimetres per minute or 'l/s*Ha' for litres per second per hectar (default).")
+    @ApiParam(value = "The unit of measure for the intensity. Specify 'mm' for millimetres per minute multiplied by the duration, or 'l/s*Ha' for litres per second per hectar. The default unit is 'l/s*Ha'")
               unit: Option[String],
+// scalastyle:on
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
     @ApiParam(value = "The output format of the result.",

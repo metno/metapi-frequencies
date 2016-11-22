@@ -116,7 +116,8 @@ object RainfallIDFs {
     //   lmh = litres per minute per hectar = lsh * 60
     //   lmd = litres per minute per square decimeter = lmh / 100000
     //   mmm = millimetres per minute = lmd * 100 = lmh / 10000 = lsh * 60 / 10000 = lsh * 0.006
-    val mm = Array("mm", "t4.litre_sec_hectar * 0.006")
+    //   mmmd = mmm * duration = lsh * 0.006 * duration
+    val mm = Array("mm", "t4.litre_sec_hectar * 0.006 * t4.duration")
     val unitQ = unit match {
       case None => lsha
       case Some(x) if x == "l/s*Ha" => lsha
