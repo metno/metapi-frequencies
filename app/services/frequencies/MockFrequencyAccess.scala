@@ -28,7 +28,6 @@ package services.frequencies
 import javax.inject.Singleton
 import no.met.geometry.Point
 import models._
-import play.Logger
 
 @Singleton
 class MockFrequencyAccess extends FrequencyAccess("") {

@@ -166,7 +166,6 @@ object RainfallIDFs {
                      |ORDER BY sourceId, duration, frequency) t5
       """.stripMargin
 
-    Logger.debug(query)
 
     DB.withConnection("kdvh") { implicit connection =>
       val sqlResult = SQL(query).as( parser * )
@@ -266,7 +265,6 @@ object RainfallIDFSources {
                    |) t5 ORDER BY stnr
       """.stripMargin
 
-    Logger.debug(query)
 
     DB.withConnection("kdvh") { implicit connection =>
       SQL(query).as( parser * )
