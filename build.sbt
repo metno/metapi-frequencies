@@ -23,6 +23,7 @@ libraryDependencies ++= Seq(
   ws,
  "com.typesafe.play" %% "anorm" % "2.4.0",
  "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
+ "edu.ucar" % "netcdf4" % "4.6.8",
  "com.github.nscala-time" %% "nscala-time" % "2.14.0",
  "io.swagger" %% "swagger-play2" % "1.5.2",
  "no.met.data" %% "util" % "0.3-SNAPSHOT",
@@ -32,7 +33,8 @@ libraryDependencies ++= Seq(
 
 resolvers ++= Seq(
   "OJO Artifactory" at "http://oss.jfrog.org/artifactory/oss-snapshot-local",
-  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases")
+  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
+  "unidata" at "http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/")
 
 // Publish Settings
 // ----------------------------------------------------------------------
