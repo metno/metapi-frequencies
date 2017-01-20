@@ -27,7 +27,6 @@ package no.met.netcdf.idf
 
 import org.specs2.mutable._
 
-import no.met.netcdf.idf.IDFExtractor;
 import no.met.netcdf.simple.FakeDataExtractor
 import java.time._
 
@@ -36,7 +35,7 @@ class IDFExtractorSpec extends Specification {
   "IDFExtractor's extract method" should {
     "return translated data" in {
       val x = new IDFExtractor(Seq(new FakeDataExtractor(1), new FakeDataExtractor(2), new FakeDataExtractor(3)))
-      x.extract(11, 67).toSet must_== Set(
+      x.extract(11, 67).get.toSet must_== Set(
         IDF(1, Duration.ofHours(1), Period.ofYears(10)),
         IDF(2, Duration.ofHours(2), Period.ofYears(20)),
         IDF(3, Duration.ofHours(3), Period.ofYears(30)))
@@ -44,13 +43,13 @@ class IDFExtractorSpec extends Specification {
 
     "filter durations" in {
       val x = new IDFExtractor(Seq(new FakeDataExtractor(1), new FakeDataExtractor(2), new FakeDataExtractor(3)))
-      x.extract(11, 67, Some(Set(Duration.ofHours(1))), None).toSet must_== Set(
+      x.extract(11, 67, Some(Set(Duration.ofHours(1))), None).get.toSet must_== Set(
         IDF(1, Duration.ofHours(1), Period.ofYears(10)))
     }
 
     "filter frequencies" in {
       val x = new IDFExtractor(Seq(new FakeDataExtractor(1), new FakeDataExtractor(2), new FakeDataExtractor(3)))
-      x.extract(11, 67, None, Some(Set(Period.ofYears(20)))).toSet must_== Set(
+      x.extract(11, 67, None, Some(Set(Period.ofYears(20)))).get.toSet must_== Set(
         IDF(2, Duration.ofHours(2), Period.ofYears(20)))
     }
 

@@ -43,21 +43,9 @@ import scala.math.Ordering
  */
 class SimpleCoordinateSystemLookup(longitudes: IndexedSeq[Double], latitudes: IndexedSeq[Double]) {
 
-  private val longitudeOrdering: Ordering[Double] = {
-    if (longitudes(0) < longitudes(1)) {
-      Ordering[Double]
-    } else {
-      Ordering[Double].reverse
-    }
-  }
+  private val longitudeOrdering: Ordering[Double] = ordering(longitudes)
 
-  private val latitudeOrdering: Ordering[Double] = {
-    if (latitudes(0) < latitudes(1)) {
-      Ordering[Double]
-    } else {
-      Ordering[Double].reverse
-    }
-  }
+  private val latitudeOrdering: Ordering[Double] = ordering(latitudes)
 
   /**
    * Get nearest x and y index in a grid using, or None if outside grid
@@ -71,8 +59,12 @@ class SimpleCoordinateSystemLookup(longitudes: IndexedSeq[Double], latitudes: In
     }
   }
 
-  override def toString: String = {
-    "CoordinateSystemLookup[" + longitudes.length + "][" + latitudes.length + "]"
+  private def ordering(s: IndexedSeq[Double]): Ordering[Double] = {
+    if (s(0) < s(1)) {
+      Ordering[Double]
+    } else {
+      Ordering[Double].reverse
+    }
   }
 }
 
@@ -81,7 +73,7 @@ object SimpleCoordinateSystemLookup {
   /**
    * Sanity-checking construction of a SimpleCoordinateSystemLookup object
    */
-  def make(ncFile: NetcdfFile): Try[SimpleCoordinateSystemLookup] = Try {
+  def make(ncFile: NetcdfFile): SimpleCoordinateSystemLookup = {
     val lon = Option[ucar.nc2.Variable](ncFile.findVariable("Lon"))
     val lat = Option[ucar.nc2.Variable](ncFile.findVariable("Lat"))
 

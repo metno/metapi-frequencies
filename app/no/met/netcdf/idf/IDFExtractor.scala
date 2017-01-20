@@ -30,7 +30,7 @@ import no.met.netcdf.simple.SimpleNetcdfExtractor
 import java.time._
 import no.met.netcdf.simple.DataExtractor
 import scala.util.Random
-
+import scala.util._
 
 /**
  * Extractor for IDF values for a given point.
@@ -48,7 +48,7 @@ class IDFExtractor(sources: Seq[DataExtractor]) {
    *
    * Data may arrive in any order.
    */
-  def extract(longitude: Double, latitude: Double): Seq[IDF] = {
+  def extract(longitude: Double, latitude: Double): Try[Seq[IDF]] = Try {
     val data = extractor.extract(variableName, longitude, latitude)
     data.toList.map{
       entry => {
@@ -60,23 +60,29 @@ class IDFExtractor(sources: Seq[DataExtractor]) {
     }
   }
 
-  def extract(longitude: Double, latitude: Double, durations: Option[Set[Duration]], frequencies: Option[Set[Period]]): Seq[IDF] = {
-    var ret = extract(longitude, latitude)
-    durations match {
-      case Some(d) => ret = ret.filter{idf => d.contains(idf.duration)}
-      case None =>
+  def extract(longitude: Double, latitude: Double, durations: Option[Set[Duration]], frequencies: Option[Set[Period]]): Try[Seq[IDF]] = {
+    extract(longitude, latitude) match {
+      case Success(r) => {
+        var ret = r
+        durations match {
+          case Some(d) => ret = ret.filter{idf => d.contains(idf.duration)}
+          case None =>
+        }
+        frequencies match {
+          case Some(f) => ret = ret.filter{idf => f.contains(idf.frequency)}
+          case None =>
+        }
+        Success(ret)
+      }
+      case Failure(x) => Failure(x)
     }
-    frequencies match {
-      case Some(f) => ret = ret.filter{idf => f.contains(idf.frequency)}
-      case None =>
-    }
-    ret
   }
 }
 
 
 object IDFExtractor {
 
+  // $COVERAGE-OFF$
   def create(netcdfFiles: Seq[String]): IDFExtractor = {
     new IDFExtractor(netcdfFiles.map{ new SimpleNetcdfExtractor(_) })
   }
@@ -137,11 +143,19 @@ object IDFExtractor {
       Random.shuffle((6.0 to 13.0 by 0.1).toList) map { lon =>
         Random.shuffle((59.0 to 68.0 by 0.1).toList) map { lat =>
           val start = System.currentTimeMillis
-          if (extractor.extract(lon, lat, Some(Set(Duration.ofMinutes(10))), Some(Set(Period.ofYears(50)))).isEmpty) {
-            -1
-          } else {
-            val stop = System.currentTimeMillis.toDouble
-            stop - start
+          extractor.extract(lon, lat, Some(Set(Duration.ofMinutes(10))), Some(Set(Period.ofYears(50)))) match {
+            case Success(result) => {
+              if (result.isEmpty) {
+                -1
+              } else {
+                val stop = System.currentTimeMillis.toDouble
+                stop - start
+              }
+            }
+            case Failure(x) => {
+              println(x)
+              -1
+            }
           }
         }
       }
@@ -152,4 +166,5 @@ object IDFExtractor {
 
     extractor.extract(10, 60, None, Some(Set(Period.ofYears(200)))).foreach(println)
   }
+  // $COVERAGE-ON$
 }

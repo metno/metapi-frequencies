@@ -49,27 +49,20 @@ class SimpleNetcdfExtractor(val netcdfFileName: String, val isMissing: (Double) 
   override def getData(variable: String, x: Int, y: Int): Option[Float] = {
     Option(ncFile.findVariable(variable)) match {
       case Some(v) => {
-        Try(v.read(List(new ucar.ma2.Range(y, y), new ucar.ma2.Range(x, x)))) match {
-          case Success(array) => {
-            val value = array.getFloat(0)
-            if (isMissing(value)) {
-              None
-            } else {
-              Some(value)
-            }
-          }
-          case Failure(_) => None
+        val array = v.read(List(new ucar.ma2.Range(y, y), new ucar.ma2.Range(x, x)))
+        val value = array.getFloat(0)
+        if (isMissing(value)) {
+          None
+        } else {
+          Some(value)
         }
       }
-      case None => None
+      case None => throw new Exception("No such variable: " + variable)
     }
   }
 
   override def getCoordinateSystemLookup: SimpleCoordinateSystemLookup = {
-    SimpleCoordinateSystemLookup.make(ncFile) match {
-      case Success(c) => c
-      case Failure(x) => throw x
-    }
+    SimpleCoordinateSystemLookup.make(ncFile)
   }
 
   val ncFile = NetcdfFile.open(netcdfFileName)

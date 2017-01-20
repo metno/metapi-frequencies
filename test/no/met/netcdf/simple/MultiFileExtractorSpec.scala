@@ -50,5 +50,10 @@ class MultiFileExtractorSpec extends Specification {
         "fake/SpatGEV.res.3hour/posterior.grid_return_30.nc" -> 3,
         "fake/SpatGEV.res.5hour/posterior.grid_return_50.nc" -> 5)
     }
+
+    "give empty output on queries outside grid" in {
+      val mfe = new MultiFileExtractor(Seq(FakeDataExtractor(1), FakeDataExtractor(3), FakeDataExtractor(5)))
+      mfe.extract("foo", 0, 0) must(beEmpty)
+    }
   }
 }

@@ -127,7 +127,14 @@ class SimpleCoordinateSystemLookupSpec extends Specification {
         case None => false must_== true
       }
     }
-
   }
+
+//  "CoordinateSystemLookup construction" should {
+//    "be sanity checked builder" in {
+//      val ncFile = FileBuilder.makeTestFile()
+//      val lookup: SimpleCoordinateSystemLookup = SimpleCoordinateSystemLookup.make(ncFile)
+//      lookup must_!= null
+//    }
+//  }
 
 }
