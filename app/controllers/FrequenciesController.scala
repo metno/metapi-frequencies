@@ -50,7 +50,7 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     new ApiResponse(code = 401, message = "Unauthorized client ID."),
     new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
     new ApiResponse(code = 500, message = "Internal server error.")))
-  def getRainfallIDFs( // scalastyle:ignore public.methods.have.type
+  def getRainfallIDF( // scalastyle:ignore public.methods.have.type
     @ApiParam(value = "The MET API sourceID(s) that you want IDF data for. Enter a comma-separated list to select multiple sources.")
               sources: Option[String],
     @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
