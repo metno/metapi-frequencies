@@ -115,8 +115,15 @@ class GridIDFAccess extends ProdIDFAccess {
 
 
 object GridIDFAccess {
+  // WARNING: Hard-coded values may need to be updated upon changes to source data.
   def name: String = "idf_grid_interpolated_1km"
-  def availableSources: List[RainfallIDFSource] = List(RainfallIDFSource(name, None, None, None))
+  // scalastyle:off magic.number
+  def availableSources: List[RainfallIDFSource] = List(RainfallIDFSource(
+    name,
+    Some("1957-01-01T00:00:00Z"),
+    Some("2016-01-01T00:00:00Z"),
+    Some(59)))
+  // scalastyle:on magic.number
 }
 
 //$COVERAGE-ON$
