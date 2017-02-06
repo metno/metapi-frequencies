@@ -30,6 +30,8 @@ import org.specs2.mutable._
 import no.met.netcdf.idf.FileHandling;
 
 import java.time._
+import java.io.File
+
 
 // scalastyle:off magic.number
 class FileHandlingSpec extends Specification {
@@ -61,6 +63,11 @@ class FileHandlingSpec extends Specification {
     }
     "fail on unknown character in frequency value" in {
       FileHandling.parseName("SpatGEV.res.1min/posterior.grid_return_kake.nc") must throwA[Exception]
+    }
+    "create extractor from base directory" in {
+      val file = File.createTempFile("dummy", "posterior.grid_return_5.nc") // a file with matching syntax
+      file.deleteOnExit()
+      FileHandling.createFromBaseDir(file.getParent) must throwA[Exception] // exception expected since the file is empty
     }
   }
 }

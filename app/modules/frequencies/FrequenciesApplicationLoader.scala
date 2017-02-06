@@ -38,7 +38,7 @@ import services.frequencies._
 class FrequenciesProdModule extends AbstractModule {
 
   def configure() {
-    bind(classOf[FrequencyAccess]).to(classOf[DbFrequencyAccess])
+    bind(classOf[IDFAccess]).to(classOf[ProdIDFAccess])
   }
 
 }
@@ -50,7 +50,7 @@ class FrequenciesProdModule extends AbstractModule {
 class FrequenciesDevModule extends AbstractModule {
 
   def configure() {
-    bind(classOf[FrequencyAccess]).to(classOf[MockFrequencyAccess])
+    bind(classOf[IDFAccess]).to(classOf[MockIDFAccess])
   }
 
 }

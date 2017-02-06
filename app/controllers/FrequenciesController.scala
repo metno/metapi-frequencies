@@ -37,8 +37,9 @@ import no.met.data._
 import models.RainfallIDF
 import services.frequencies._
 
+
 @Api(value = "frequencies")
-class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends Controller {
+class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
 
   @ApiOperation(
     value = "Get rainfall IDF data.",
@@ -50,42 +51,39 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
     new ApiResponse(code = 401, message = "Unauthorized client ID."),
     new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
     new ApiResponse(code = 500, message = "Internal server error.")))
-  def getRainfallIDFs( // scalastyle:ignore public.methods.have.type
-    @ApiParam(value = "The MET API sourceID(s) that you want IDF data for. Enter a comma-separated list to select multiple sources.")
+  def getRainfallIDF( // scalastyle:ignore public.methods.have.type
+// scalastyle:off line.size.limit
+    @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either 1) a comma-separated list of one or more stations (each of the form SN<number>[:<number>|all]), or 2) the name of a gridded dataset.")
               sources: Option[String],
+    @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(<longitude degrees> <latitude degrees>). Data from the nearest grid point is returned.")
+              location: Option[String],
     @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
-// scalastyle:off line.size.limit
     @ApiParam(value = "The MET API IDF frequencies (return periods), in years, that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
               frequencies: Option[String],
     @ApiParam(value = "The unit of measure for the intensity. Specify 'mm' for millimetres per minute multiplied by the duration, or 'l/s*Ha' for litres per second per hectar. The default unit is 'l/s*Ha'")
               unit: Option[String],
-// scalastyle:on
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
+  // scalastyle:on line.size.limit
     @ApiParam(value = "The output format of the result.",
               allowableValues = "jsonld",
               defaultValue = "jsonld")
               format: String) = no.met.security.AuthorizedAction { implicit request =>
 
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
-    val fieldList = FieldSpecification.parse(fields)
+    val queryParams = QueryParameters(sources, fields, location, durations, frequencies, unit)
 
     Try  {
       // ensure that the query string contains supported fields only
-      QueryStringUtil.ensureSubset(Set("sources", "durations", "frequencies", "unit", "fields"), request.queryString.keySet)
+      QueryStringUtil.ensureSubset(Set("sources", "fields", "location", "durations", "frequencies", "unit"), request.queryString.keySet)
 
-      val sourceList = SourceSpecification.parse(sources)
-      val durationList = IDFDurationSpecification.parse(durations)
-      val frequencyList = FrequencySpecification.parse(frequencies)
-      frequencyService.getRainfallIDFs(sourceList, durationList, frequencyList, unit, fieldList)
+      idfAccess.idfValues(queryParams)
+
     } match {
       case Success(data) =>
         if (data isEmpty) {
-          Error.error(NOT_FOUND,
-            Some("Could not find rainfall IDF data for any of the source ids"),
-            Some("Ensure that rainfall IDF data exists for at least one source id"),
-            start)
+          Error.error(NOT_FOUND, Some(idfAccess.valuesNotFoundReason(Some(queryParams))), Some(idfAccess.valuesNotFoundHelp(Some(queryParams))), start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf-v0+json"
@@ -94,10 +92,15 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
         }
       case Failure(x: BadRequestException) =>
         Error.error(BAD_REQUEST, Some(x getLocalizedMessage), x help, start)
-      case Failure(x) =>
-        Error.error(BAD_REQUEST, Some(x getLocalizedMessage), None, start)
+      case Failure(x) => {
+        //$COVERAGE-OFF$
+        Logger.error(x.getLocalizedMessage)
+        Error.error(INTERNAL_SERVER_ERROR, Some("An internal error occurred"), None, start)
+        //$COVERAGE-ON$
+      }
     }
   }
+
 
   @ApiOperation(
     value = "Get available sources for rainfall IDF data.",
@@ -119,14 +122,15 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
                          defaultValue = "jsonld")
                        format: String) = no.met.security.AuthorizedAction {
     implicit request =>
+
       val start = DateTime.now(DateTimeZone.UTC) // start the clock
       val fieldList = FieldSpecification.parse(fields)
       Try  {
         // ensure that the query string contains supported fields only
         QueryStringUtil.ensureSubset(Set("sources", "fields"), request.queryString.keySet)
 
-        val sourceList = SourceSpecification.parse(sources)
-        frequencyService.getRainfallIDFSources(sourceList, fieldList)
+        idfAccess.idfSources(QueryParameters(sources, fields))
+
       } match {
         case Success(data) =>
           if (data isEmpty) {
@@ -141,9 +145,12 @@ class FrequenciesController @Inject()(frequencyService: FrequencyAccess) extends
           }
         case Failure(x: BadRequestException) =>
           Error.error(BAD_REQUEST, Some(x getLocalizedMessage), x help, start)
-        case Failure(x) =>
-          Error.error(BAD_REQUEST, Some(x getLocalizedMessage), None, start)
+        case Failure(x) => {
+          //$COVERAGE-OFF$
+          Logger.error(x.getLocalizedMessage)
+          Error.error(INTERNAL_SERVER_ERROR, Some("An internal error occurred"), None, start)
+          //$COVERAGE-ON$
+        }
       }
   }
-
 }

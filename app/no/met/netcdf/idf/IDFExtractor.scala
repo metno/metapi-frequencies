@@ -77,6 +77,14 @@ class IDFExtractor(sources: Seq[DataExtractor]) {
       case Failure(x) => Failure(x)
     }
   }
+
+  def availableDurations: Set[Int] = {
+    extractor.availableDurations
+  }
+
+  def availableFrequencies: Set[Int] = {
+    extractor.availableFrequencies
+  }
 }
 
 
@@ -85,6 +93,10 @@ object IDFExtractor {
   // $COVERAGE-OFF$
   def create(netcdfFiles: Seq[String]): IDFExtractor = {
     new IDFExtractor(netcdfFiles.map{ new SimpleNetcdfExtractor(_) })
+  }
+
+  def createFromBaseDir(baseDir: String): IDFExtractor = {
+    FileHandling.createFromBaseDir(baseDir)
   }
 
   // scalastyle:off

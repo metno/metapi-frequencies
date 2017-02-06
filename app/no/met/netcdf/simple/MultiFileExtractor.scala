@@ -42,7 +42,7 @@ class MultiFileExtractor(val extractors: Seq[DataExtractor]) {
   /**
    * List of available variables
    */
-  val available = extractors.map { f => f.availableVariables }.flatten.toSet
+  val available = extractors.flatMap { f => f.availableVariables }.toSet
 
   /**
    * Extract data for the given variable and lon/lat coordinates
@@ -66,4 +66,21 @@ class MultiFileExtractor(val extractors: Seq[DataExtractor]) {
       }
     }.flatMap { x => x }.toMap
   }
+
+  // Returns all durations available in the source files.
+  def availableDurations: Set[Int] = {
+    // ### hard-coded for now; eventually the values could be read from the source files (and maybe cached if the files are not expected to change)
+    // scalastyle:off magic.number
+    Set(10, 30, 60, 180, 360, 720)
+    // scalastyle:on magic.number
+  }
+
+  // Returns all frequencies available in the source files.
+  def availableFrequencies: Set[Int] = {
+    // ### hard-coded for now; eventually the values could be read from the source files (and maybe cached if the files are not expected to change)
+    // scalastyle:off magic.number
+    Set(5, 10, 20, 25, 50, 100, 200)
+    // scalastyle:on magic.number
+  }
+
 }

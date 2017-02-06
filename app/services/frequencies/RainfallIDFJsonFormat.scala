@@ -44,7 +44,7 @@ class RainfallIDFJsonFormat extends BasicJsonFormat {
   implicit val rainfallIDFWrites = Json.writes[RainfallIDF]
 
   implicit val rainfallIDFResponseWrites: Writes[RainfallIDFResponse] = (
-    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and 
+    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and
     (JsPath \ ApiConstants.OBJECT_TYPE_NAME).write[String] and
     (JsPath \ ApiConstants.API_VERSION_NAME).write[String] and
     (JsPath \ ApiConstants.LICENSE_NAME).write[URL] and
@@ -86,5 +86,5 @@ class RainfallIDFJsonFormat extends BasicJsonFormat {
       idfs)
     Json.prettyPrint(Json.toJson(response))
   }
-  
+
 }

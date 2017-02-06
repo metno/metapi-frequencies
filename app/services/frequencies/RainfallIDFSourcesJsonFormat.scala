@@ -34,6 +34,7 @@ import no.met.data.{ApiConstants,ConfigUtil}
 import no.met.json.BasicJsonFormat
 import models._
 
+
 /**
  * Creating a json representation of rainfall IDF sources data
  */

@@ -25,15 +25,20 @@
 
 package services.frequencies
 
-import javax.inject.Singleton
-import no.met.geometry.Point
 import models._
+import no.met.geometry.Point
+import no.met.data._
+import scala.util._
 
-@Singleton
-class MockFrequencyAccess extends FrequencyAccess("") {
+
+/**
+  * Mocked IDF access.
+  */
+class MockIDFAccess extends IDFAccess {
 
   // scalastyle:off magic.number
-  private val rainfallIDFs = List[RainfallIDF](
+
+  private val rainfallIDF = List[RainfallIDF](
     new RainfallIDF(
       "18700",
       Some(Point("Point", Seq(10.54, 60.1))),
@@ -57,16 +62,32 @@ class MockFrequencyAccess extends FrequencyAccess("") {
       Some(42),
       Some("l/s*Ha"),
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
+    ),
+    new RainfallIDF(
+      "idf_grid_interpolated_1km",
+      Some(Point("Point", Seq(10.54, 60.1))),
+      None,
+      None,
+      Some("mm"),
+      Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     )
   )
-  // scalastyle:on
 
-  def getRainfallIDFs(sources: Seq[String], durations: Set[Int], frequencies: Set[Int], unit: Option[String], fields: Set[String]): List[RainfallIDF] = {
-    rainfallIDFs
-      .filter (x => sources.length == 0 || sources.contains(x.sourceId.toUpperCase) )
+  def idfValues(qp: QueryParameters): List[RainfallIDF] = {
+    extractDurations(qp.durations)
+    extractFrequencies(qp.frequencies)
+
+    if (GridIDFAccess.name.toUpperCase == qp.sources.getOrElse("").toUpperCase) { // grid case
+      extractLocation(qp.location)
+      rainfallIDF.filter(x => GridIDFAccess.name.contains(x.sourceId))
+    } else { // station case
+      val stations = SourceSpecification.parse(qp.sources)
+      FieldSpecification.parse(qp.fields)
+      rainfallIDF.filter(x => stations.length == 0 || stations.contains(x.sourceId.toUpperCase))
+    }
   }
 
-  // scalastyle:off magic.number
+
   private val rainfallIDFSources = List[RainfallIDFSource](
     new RainfallIDFSource(
       "18700",
@@ -85,13 +106,31 @@ class MockFrequencyAccess extends FrequencyAccess("") {
       Some("1978-05-29T12:00:00Z"),
       Some("1979-05-29T12:00:00Z"),
       Some(42)
+    ),
+    new RainfallIDFSource(
+      "idf_grid_interpolated_1km",
+      None,
+      None,
+      None
     )
   )
-  // scalastyle:on
 
-  def getRainfallIDFSources(sources: Seq[String], fields: Set[String]) : List[RainfallIDFSource] = {
-    rainfallIDFSources
-      .filter (x => sources.length == 0 || sources.contains(x.sourceId.toUpperCase) )
+  def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
+    extractDurations(qp.durations)
+    extractFrequencies(qp.frequencies)
+
+    if (GridIDFAccess.name.toUpperCase == qp.sources.getOrElse("").toUpperCase) { // grid case
+      rainfallIDFSources.filter(x => GridIDFAccess.name.contains(x.sourceId))
+    } else { // station case
+      val stations = SourceSpecification.parse(qp.sources)
+      FieldSpecification.parse(qp.fields)
+      rainfallIDFSources.filter(x => stations.length == 0 || stations.contains(x.sourceId.toUpperCase))
+    }
   }
 
+  override def availableDurations: Set[Int] = Set(20)
+
+  override def availableFrequencies: Set[Int] = Set(20)
+
+  // scalastyle:on magic.number
 }

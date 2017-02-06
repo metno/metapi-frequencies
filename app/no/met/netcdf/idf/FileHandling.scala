@@ -26,7 +26,10 @@
 package no.met.netcdf.idf
 
 import java.time._
+import java.io.File
 import scala.util.matching._
+import util._
+
 
 case class DurationFrequency(duration: Duration, frequency: Period)
 
@@ -53,6 +56,22 @@ object FileHandling {
         }
       }
       case _ => throw new Exception("Unable to parse file name")
+    }
+  }
+
+  /**
+    * Creates an IDFExtractor from relevant files in a directory subtree.
+    */
+  def createFromBaseDir(baseDir: String): IDFExtractor = {
+    def getFiles(f: File): Array[File] = {
+      val these = f.listFiles
+      these ++ these.filter(_.isDirectory).flatMap(getFiles)
+    }
+
+    Try(getFiles(new File(baseDir)).filter(
+      f => """.*grid_return_\d+\.nc$""".r.findFirstIn(f.getName).isDefined).map(f => f.getAbsolutePath).toSeq) match {
+      case Success(files) => IDFExtractor.create(files)
+      case Failure(e) => throw new Exception(s"Failed to read NetCDF files in directory $baseDir")
     }
   }
 }
