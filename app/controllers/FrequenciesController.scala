@@ -52,7 +52,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getRainfallIDF( // scalastyle:ignore public.methods.have.type
-// scalastyle:off line.size.limit
+    // scalastyle:off line.size.limit
     @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either 1) a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or 2) the name of a gridded dataset.")
               sources: Option[String],
     @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned.")
@@ -65,7 +65,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
               unit: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
               fields: Option[String],
-  // scalastyle:on line.size.limit
+    // scalastyle:on line.size.limit
     @ApiParam(value = "The output format of the result.",
               allowableValues = "jsonld",
               defaultValue = "jsonld")
@@ -86,7 +86,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
           Error.error(NOT_FOUND, Some(idfAccess.valuesNotFoundReason(Some(queryParams))), Some(idfAccess.valuesNotFoundHelp(Some(queryParams))), start)
         } else {
           format.toLowerCase() match {
-            case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf-v0+json"
+            case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfall-v0+json"
             case x        => Error.error(BAD_REQUEST, Some(s"Invalid output format: $x"), Some("Supported output formats: jsonld"), start)
           }
         }
@@ -139,7 +139,8 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
               Some("Ensure that information exists for at least one source id"), start)
           } else {
             format.toLowerCase() match {
-              case "jsonld" => Ok(new RainfallIDFSourcesJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfallidf.availablesources-v0+json"
+              case "jsonld" =>
+                Ok(new RainfallIDFSourcesJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfall.availablesources-v0+json"
               case x        => Error.error(BAD_REQUEST, Some(s"Invalid output format: $x"), Some("Supported output formats: jsonld"), start)
             }
           }
