@@ -53,9 +53,9 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getRainfallIDF( // scalastyle:ignore public.methods.have.type
 // scalastyle:off line.size.limit
-    @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either 1) a comma-separated list of one or more stations (each of the form SN<number>[:<number>|all]), or 2) the name of a gridded dataset.")
+    @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either 1) a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or 2) the name of a gridded dataset.")
               sources: Option[String],
-    @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(<longitude degrees> <latitude degrees>). Data from the nearest grid point is returned.")
+    @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned.")
               location: Option[String],
     @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
