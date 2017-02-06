@@ -92,7 +92,7 @@ trait IDFAccess {
     val requested = requestedStr match {
       case Some(x) => Try(x.split(",").map(_.trim.toInt).toSet) match {
         case Success(req) => req
-        case Failure(e) => throw new BadRequestException(s"Malformed query parameter: $name (not a comma-separated list of integers")
+        case Failure(e) => throw new BadRequestException(s"Malformed query parameter: $name (not a comma-separated list of integers)")
       }
       case _ => Set[Int]()
     }
