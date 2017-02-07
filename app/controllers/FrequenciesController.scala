@@ -83,7 +83,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     } match {
       case Success(data) =>
         if (data isEmpty) {
-          Error.error(NOT_FOUND, Some(idfAccess.valuesNotFoundReason(Some(queryParams))), Some(idfAccess.valuesNotFoundHelp(Some(queryParams))), start)
+          Error.error(NOT_FOUND, Some(idfAccess.valuesNotFoundReason(queryParams)), Some(idfAccess.valuesNotFoundHelp(queryParams)), start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(new RainfallIDFJsonFormat().format(start, data)) as "application/vnd.no.met.data.frequencies.rainfall-v0+json"

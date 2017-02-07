@@ -306,9 +306,9 @@ class StationIDFAccess extends ProdIDFAccess {
     // scalastyle:on magic.number
   }
 
-  protected override def valuesNotFoundReason(): String = "Could not find rainfall IDF data for any of the station source ids"
+  protected override def valuesNotFoundReason: String = "Could not find rainfall IDF data for any of the station source ids"
 
-  protected override def valuesNotFoundHelp(): String = "Ensure that rainfall IDF data exists for at least one station source id"
+  protected override def valuesNotFoundHelp: String = "Ensure that rainfall IDF data exists for at least one station source id"
 }
 
 //$COVERAGE-ON$

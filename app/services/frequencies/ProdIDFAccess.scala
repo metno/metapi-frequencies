@@ -41,9 +41,9 @@ import scala.util._
 class ProdIDFAccess extends IDFAccess {
 
   /**
-    * Implements the interface by delegating to a specific implementation based on the 'sources' query parameter.
+    * Implements the interface by delegating to a specific implementation based on the query parameters.
     */
-  def idfValues(qp: QueryParameters): List[RainfallIDF] = ProdIDFAccess.selectImplementation(qp.sources).idfValues(qp)
+  def idfValues(qp: QueryParameters): List[RainfallIDF] = ProdIDFAccess.selectImplementation(qp).idfValues(qp)
 
   /**
     * Implements the interface by delegating to a specific implementation. If the 'sources' query parameter is specified,
@@ -52,14 +52,14 @@ class ProdIDFAccess extends IDFAccess {
     */
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
     qp.sources match {
-      case Some(_) => ProdIDFAccess.selectImplementation(qp.sources).idfSources(qp) // get available sources for one type only
+      case Some(_) => ProdIDFAccess.selectImplementation(qp).idfSources(qp) // get available sources for one type only
       case None => ProdIDFAccess.gridAccess.idfSources(qp) ++ ProdIDFAccess.stationAccess.idfSources(qp) // get available sources for both types
     }
   }
 
-  override def valuesNotFoundReason(qp: Option[QueryParameters]): String = ProdIDFAccess.selectImplementation(qp.get.sources).valuesNotFoundReason
+  override def valuesNotFoundReason(qp: QueryParameters): String = ProdIDFAccess.selectImplementation(qp).valuesNotFoundReason
 
-  override def valuesNotFoundHelp(qp: Option[QueryParameters]): String = ProdIDFAccess.selectImplementation(qp.get.sources).valuesNotFoundHelp
+  override def valuesNotFoundHelp(qp: QueryParameters): String = ProdIDFAccess.selectImplementation(qp).valuesNotFoundHelp
 }
 
 
@@ -74,8 +74,19 @@ object ProdIDFAccess {
   /**
     * Uses the sources query parameter to return either the gridded data implementation or the station implementation.
     */
-  def selectImplementation(sources: Option[String]): ProdIDFAccess = {
-    if (GridIDFAccess.name.toUpperCase == sources.getOrElse("").toUpperCase) gridAccess else stationAccess
+  def selectImplementation(qp: QueryParameters): ProdIDFAccess = {
+    val reqGridName = qp.sources.getOrElse("")
+    val gridNameMatch = GridIDFAccess.name.toUpperCase == reqGridName.toUpperCase
+
+    // assume grid case is requested iff location is specified or grid name matches
+    if (qp.location.isDefined) {
+      if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: ${reqGridName}, expected: ${GridIDFAccess.name}")
+      gridAccess
+    } else if (gridNameMatch) {
+      throw new BadRequestException("no location found for gridded dataset")
+    } else {
+      stationAccess
+    }
   }
 }
 

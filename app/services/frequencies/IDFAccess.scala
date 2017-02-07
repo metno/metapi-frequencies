@@ -60,7 +60,7 @@ trait IDFAccess {
   /**
     * Overload used for selecting implementation based on query parameters.
     */
-  def valuesNotFoundReason(qp: Option[QueryParameters]): String = ""
+  def valuesNotFoundReason(qp: QueryParameters): String = ""
 
 
   /**
@@ -72,7 +72,7 @@ trait IDFAccess {
   /**
     * Overload used for selecting implementation based on query parameters.
     */
-  def valuesNotFoundHelp(qp: Option[QueryParameters]): String = ""
+  def valuesNotFoundHelp(qp: QueryParameters): String = ""
 
 
   /**
@@ -137,7 +137,7 @@ trait IDFAccess {
         case "" => "Location not found"
         case loc => s"$loc is not a valid point"
       },
-      Some("Supported syntax: location=POINT(lon lat)"))
+      Some("Supported syntax: location=POINT(<longitude degrees> <latitude degrees>)"))
 
     Try(Geometry.decode(location.getOrElse(""))) match {
       case Success(geom) => geom match {
