@@ -33,8 +33,6 @@ import no.met.data._
 import no.met.geometry._
 import no.met.netcdf.idf._
 
-import play.api.Logger
-
 
 //$COVERAGE-OFF$ Not testing disk access
 
@@ -102,7 +100,7 @@ class GridIDFAccess extends ProdIDFAccess {
   // scalastyle:on cyclomatic.complexity
 
 
-  override def idfSources(qp: QueryParameters): List[RainfallIDFSource] = GridIDFAccess.availableSources
+  override def idfSources(qp: QueryParameters): List[RainfallIDFSource] = GridIDFAccess.availableSources(qp)
 
   override def availableDurations: Set[Int] = gridExtractor.availableDurations
 
@@ -118,11 +116,14 @@ object GridIDFAccess {
   // WARNING: Hard-coded values may need to be updated upon changes to source data.
   def name: String = "idf_grid_interpolated_1km"
   // scalastyle:off magic.number
-  def availableSources: List[RainfallIDFSource] = List(RainfallIDFSource(
-    name,
-    Some("1957-01-01T00:00:00Z"),
-    Some("2016-01-01T00:00:00Z"),
-    Some(59)))
+  def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
+    val fieldsSet = FieldSpecification.parse(qp.fields)
+    List(RainfallIDFSource(
+      name,
+      if (fieldsSet.isEmpty || fieldsSet.contains("validfrom")) Some("1957-01-01T00:00:00Z") else None,
+      if (fieldsSet.isEmpty || fieldsSet.contains("validto")) Some("2016-01-01T00:00:00Z") else None,
+      if (fieldsSet.isEmpty || fieldsSet.contains("numberofseasons")) Some(59) else None))
+  }
   // scalastyle:on magic.number
 }
 
