@@ -53,23 +53,23 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getRainfallIDF( // scalastyle:ignore public.methods.have.type
     // scalastyle:off line.size.limit
-    @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either 1) a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or 2) the name of a gridded dataset.")
-              sources: Option[String],
-    @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned.")
-              location: Option[String],
+    @ApiParam(value = """The MET API source ID(s) that you want IDF data for. Enter either a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or the name of a gridded dataset. If left out, IDF data for all available station sources is returned."""
+    ) sources: Option[String],
+    @ApiParam(value = """The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned."""
+    ) location: Option[String],
     @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
     @ApiParam(value = "The MET API IDF frequencies (return periods), in years, that you want IDF data for. Enter a comma-separated list to select multiple frequencies.")
               frequencies: Option[String],
     @ApiParam(value = "The unit of measure for the intensity. Specify 'mm' for millimetres per minute multiplied by the duration, or 'l/s*Ha' for litres per second per hectar. The default unit is 'l/s*Ha'")
               unit: Option[String],
-    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
+    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId and values attributes will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons, and values in the response.")
               fields: Option[String],
-    // scalastyle:on line.size.limit
     @ApiParam(value = "The output format of the result.",
-              allowableValues = "jsonld",
-              defaultValue = "jsonld")
-              format: String) = no.met.security.AuthorizedAction { implicit request =>
+      allowableValues = "jsonld",
+      defaultValue = "jsonld")
+    format: String) = no.met.security.AuthorizedAction { implicit request =>
+    // scalastyle:on line.size.limit
 
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
     val queryParams = QueryParameters(sources, fields, location, durations, frequencies, unit)
@@ -113,15 +113,16 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getRainfallIDFSources( // scalastyle:ignore public.methods.have.type
-                       @ApiParam(value = "A comma-separated list of MET API sourceIDs that you want information for. If left out, information for all available sources is returned.")
-                       sources: Option[String],
-                       @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId attribute will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId and values); e.g.: unit,numberOfSeasons will show only sourceId, unit, numberOfSeasons and values in the data set.")
-                       fields: Option[String],
-                       @ApiParam(value = "The output format of the result.",
-                         allowableValues = "jsonld",
-                         defaultValue = "jsonld")
-                       format: String) = no.met.security.AuthorizedAction {
-    implicit request =>
+    // scalastyle:off line.size.limit
+    @ApiParam(value = "The MET API source ID(s) that you want information for. Enter either a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or the name of a gridded dataset. If left out, information for all available sources is returned.")
+    sources: Option[String],
+    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId attribute will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId); e.g.: validFrom,numberOfSeasons will show only sourceId, validFrom, and numberOfSeasons in the response.")
+    fields: Option[String],
+    @ApiParam(value = "The output format of the result.",
+      allowableValues = "jsonld",
+      defaultValue = "jsonld")
+    format: String) = no.met.security.AuthorizedAction { implicit request =>
+    // scalastyle:on line.size.limit
 
       val start = DateTime.now(DateTimeZone.UTC) // start the clock
       val fieldList = FieldSpecification.parse(fields)
