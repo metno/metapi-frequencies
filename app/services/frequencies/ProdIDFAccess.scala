@@ -52,7 +52,7 @@ class ProdIDFAccess extends IDFAccess {
     */
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
     qp.sources match {
-      case Some(_) => ProdIDFAccess.selectImplementation(qp).idfSources(qp) // get available sources for one type only
+      case Some(_) => ProdIDFAccess.selectImplementation(qp, false).idfSources(qp) // get available sources for one type only
       case None => ProdIDFAccess.gridAccess.idfSources(qp) ++ ProdIDFAccess.stationAccess.idfSources(qp) // get available sources for both types
     }
   }
@@ -74,16 +74,22 @@ object ProdIDFAccess {
   /**
     * Uses the sources query parameter to return either the gridded data implementation or the station implementation.
     */
-  def selectImplementation(qp: QueryParameters): ProdIDFAccess = {
+  def selectImplementation(qp: QueryParameters, gridRequiresLocation: Boolean = true): ProdIDFAccess = {
     val reqGridName = qp.sources.getOrElse("")
     val gridNameMatch = GridIDFAccess.name.toUpperCase == reqGridName.toUpperCase
 
-    // assume grid case is requested iff location is specified or grid name matches
-    if (qp.location.isDefined) {
-      if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: ${reqGridName}, expected: ${GridIDFAccess.name}")
-      gridAccess
+    if (gridRequiresLocation) {
+      // assume grid case is requested iff location is specified or grid name matches
+      if (qp.location.isDefined) {
+        if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: $reqGridName, expected: ${GridIDFAccess.name}")
+        gridAccess
+      } else if (gridNameMatch) {
+        throw new BadRequestException("no location found for gridded dataset")
+      } else {
+        stationAccess
+      }
     } else if (gridNameMatch) {
-      throw new BadRequestException("no location found for gridded dataset")
+      gridAccess
     } else {
       stationAccess
     }
