@@ -114,7 +114,7 @@ class GridIDFAccess extends ProdIDFAccess {
 
 object GridIDFAccess {
   // WARNING: Hard-coded values may need to be updated upon changes to source data.
-  def name: String = "idf_grid_interpolated_1km"
+  def name: String = "idf_bma1km_v1"
   // scalastyle:off magic.number
   def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
     val fieldsSet = FieldSpecification.parse(qp.fields)

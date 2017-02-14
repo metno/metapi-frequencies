@@ -64,7 +64,7 @@ class MockIDFAccess extends IDFAccess {
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     ),
     new RainfallIDF(
-      "idf_grid_interpolated_1km",
+      "idf_bma1km_v1",
       Some(Point("Point", Seq(10.54, 60.1))),
       None,
       None,
@@ -108,7 +108,7 @@ class MockIDFAccess extends IDFAccess {
       Some(42)
     ),
     new RainfallIDFSource(
-      "idf_grid_interpolated_1km",
+      "idf_bma1km_v1",
       None,
       None,
       None
