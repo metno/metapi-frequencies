@@ -44,7 +44,7 @@ class GridIDFAccess extends ProdIDFAccess {
   private val gridExtractor: IDFExtractor = {
     val confParam = "idf.netcdf.basedir"
     current.configuration.getString(confParam) match {
-      case Some(baseDir) => IDFExtractor.createFromBaseDir(s"$baseDir/${GridIDFAccess.name}")
+      case Some(baseDir) => IDFExtractor.createFromBaseDir(s"$baseDir/${GridIDFAccess.diskName}")
       case None => throw new Exception(s"Configuration parameter for gridded data base directory not found: $confParam")
     }
   }
@@ -115,6 +115,7 @@ class GridIDFAccess extends ProdIDFAccess {
 object GridIDFAccess {
   // WARNING: Hard-coded values may need to be updated upon changes to source data.
   def name: String = "idf_bma1km_v1"
+  def diskName: String = "idf_grid_interpolated_1km" // TBD: use name for diskName once directory has been renamed to the former
   // scalastyle:off magic.number
   def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
     val fieldsSet = FieldSpecification.parse(qp.fields)
