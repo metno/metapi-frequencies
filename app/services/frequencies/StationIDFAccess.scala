@@ -41,6 +41,26 @@ import no.met.data._
  */
 class StationIDFAccess extends ProdIDFAccess {
 
+  /**
+    * Generates fields to use in the SELECT clause.
+    * @param optFieldsReq Requested optional fields (i.e. specified in the query parameter 'fields').
+    * @param optFieldsSup Supported optional fields.
+    * @param mndFields Mandatory fields.
+    * @return A comma-separated list of fields.
+    */
+  private def getSelectQuery(optFieldsReq: Set[String], optFieldsSup: Set[String], mndFields: Set[String]): String = {
+    // ensure that all requested optional fields are supported
+    val unsupFields = optFieldsReq -- optFieldsSup
+    if (unsupFields.nonEmpty) {
+      throw new BadRequestException(s"Unsupported fields: ${unsupFields.mkString(",")}", Some(s"Supported fields: ${optFieldsSup.mkString(", ")}"))
+    }
+
+    // ensure that unrequested optional fields are output as null values
+    val mndAndReqStr = (mndFields ++ optFieldsReq).mkString(", ") // mandatory fields and requested optional fields
+    val optFieldsUnreq = optFieldsSup -- optFieldsReq // unrequested optional fields
+    mndAndReqStr + (if (optFieldsUnreq.isEmpty) "" else ", " + optFieldsUnreq.map( x => "NULL AS " + x ).mkString(", "))
+  }
+
   // Handles the 'values' case.
   private object idfValuesExec {
 
@@ -66,28 +86,6 @@ class StationIDFAccess extends ProdIDFAccess {
       }
     }
 
-    // ### Refactor against other getSelectQuery() to minimize duplicate code ... TBD
-    private def getSelectQuery(fieldsSet: Set[String]): String = {
-      val suppFields = Set("operatingperiods", "numberofseasons", "unit")
-      val unsuppFields = fieldsSet -- suppFields
-      if (unsuppFields.nonEmpty) {
-        throw new BadRequestException(
-          "Invalid fields in the query parameter: " + unsuppFields.mkString(","),
-          Some(s"Supported fields: ${suppFields.mkString(", ")}"))
-      }
-      val fields2 = "sourceid, intensity, duration, frequency, " + fieldsSet.mkString(", ")
-      val missing = suppFields -- fieldsSet
-      if (missing.isEmpty) {
-        fields2
-      } else {
-        val missingStr = missing
-          .map( x => "NULL AS " + x )
-          .mkString(", ")
-          .replace("NULL AS values", "NULL AS intensity, NULL AS duration, NULL AS frequency")
-        fields2 + "," + missingStr
-      }
-    }
-
     // scalastyle:off method.length
     // scalastyle:off cyclomatic.complexity
     def apply(qp: QueryParameters): List[RainfallIDF] = {
@@ -97,7 +95,8 @@ class StationIDFAccess extends ProdIDFAccess {
       val durationsSet = extractDurations(qp.durations)
       val frequenciesSet = extractFrequencies(qp.frequencies)
 
-      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(fieldsSet)
+      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(
+        fieldsSet, Set("operatingperiods", "numberofseasons", "unit"), Set("sourceid", "intensity", "duration", "frequency"))
 
       val sourceQ =
         if (stations.isEmpty) {
@@ -209,34 +208,13 @@ class StationIDFAccess extends ProdIDFAccess {
       }
     }
 
-    // ### Refactor against other getSelectQuery() to minimize duplicate code ... TBD
-    private def getSelectQuery(fieldsSet: Set[String]): String = {
-      val suppFields = Set("validfrom", "validto", "numberofseasons")
-      val unsuppFields = fieldsSet -- suppFields
-      if (unsuppFields.nonEmpty) {
-        throw new BadRequestException(
-          "Invalid fields in the query parameter: " + unsuppFields.mkString(","),
-          Some(s"Supported fields: ${suppFields.mkString(", ")}"))
-      }
-      val fields2 = "sourceid, " + fieldsSet.mkString(", ")
-      val missing = suppFields -- fieldsSet
-      if (missing.isEmpty) {
-        fields2
-      } else {
-        val missingStr = missing
-          .map( x => "NULL AS " + x )
-          .mkString(", ")
-        fields2 + "," + missingStr
-      }
-    }
-
     // scalastyle:off method.length
     def apply(qp: QueryParameters): List[RainfallIDFSource] = {
 
       val stations = SourceSpecification.parse(qp.sources)
       val fieldsSet = FieldSpecification.parse(qp.fields)
 
-      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(fieldsSet)
+      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(fieldsSet, Set("validfrom", "validto", "numberofseasons"), Set("sourceid", "stnr"))
 
       val sourceQ =
         if (stations.isEmpty) {
@@ -247,7 +225,7 @@ class StationIDFAccess extends ProdIDFAccess {
 
       val query = s"""
                      |SELECT DISTINCT
-                     |$selectQ, stnr
+                     |$selectQ
                      |FROM
                      |(SELECT
                      | t3.stnr AS stnr,
