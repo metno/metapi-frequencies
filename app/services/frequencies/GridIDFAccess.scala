@@ -77,24 +77,27 @@ class GridIDFAccess extends ProdIDFAccess {
     // format return value
     idfs match {
       case x if x.isEmpty => List[RainfallIDF]()
-      case _ => List(RainfallIDF(
-        qp.sources.get,
-        Some(point),
-        None,
-        None,
-        Some(if (unitIsMm) "mm" else "l/s*Ha"),
-        idfs.map(x => IDFValue(
-          if (unitIsMm) {
-            x.intensity
-          } else {
-            x.duration.toMinutes match {
-              case dmins if dmins > 0 => x.intensity / (0.006 * dmins)
-              case dmins => throw new Exception("Non-positive duration found in gridded data: " + dmins)
-            }
-          },
-          x.duration.toMinutes,
-          x.frequency.getYears))
-      ))
+      case _ => {
+        val fields = GridIDFAccess.fieldsToInclude(FieldSpecification.parse(qp.fields), Set("numberofseasons", "unit"))
+        List(RainfallIDF(
+          qp.sources.get,
+          Some(point),
+          None, // operatingPeriods (n/a)
+          if (fields.contains("numberofseasons")) Some(GridIDFAccess.numberOfSeasons) else None,
+          if (fields.contains("unit")) Some(if (unitIsMm) "mm" else "l/s*Ha") else None,
+          idfs.map(x => IDFValue(
+            if (unitIsMm) {
+              x.intensity
+            } else {
+              x.duration.toMinutes match {
+                case dmins if dmins > 0 => x.intensity / (0.006 * dmins)
+                case dmins => throw new Exception("Non-positive duration found in gridded data: " + dmins)
+              }
+            },
+            x.duration.toMinutes,
+            x.frequency.getYears))
+        ))
+      }
     }
   }
   // scalastyle:on cyclomatic.complexity
@@ -116,16 +119,37 @@ object GridIDFAccess {
   // WARNING: Hard-coded values may need to be updated upon changes to source data.
   def name: String = "idf_bma1km_v1"
   def diskName: String = "idf_grid_interpolated_1km" // TBD: use name for diskName once directory has been renamed to the former
+  def validFrom: String = "1957-01-01T00:00:00Z"
+  def validTo: String = "2016-01-01T00:00:00Z"
   // scalastyle:off magic.number
+  def numberOfSeasons: Int = 59
+  // scalastyle:on magic.number
+
+  /**
+    * Generates fields to include in the final result.
+    * @param optFieldsReq Requested optional fields (i.e. specified in the query parameter 'fields'). Note: an empty set means "all fields".
+    * @param optFieldsSup Supported optional fields.
+    * @return A set of fields.
+    */
+  private def fieldsToInclude(optFieldsReq: Set[String], optFieldsSup: Set[String]): Set[String] = {
+    // ensure that all requested optional fields are supported
+    val unsupFields = optFieldsReq -- optFieldsSup
+    if (unsupFields.nonEmpty) {
+      throw new BadRequestException(s"Unsupported fields: ${unsupFields.mkString(",")}", Some(s"Supported fields: ${optFieldsSup.mkString(", ")}"))
+    }
+
+    // return either all supported fields or those explicitly requested
+    if (optFieldsReq.isEmpty) optFieldsSup else optFieldsReq
+  }
+
   def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
-    val fieldsSet = FieldSpecification.parse(qp.fields)
+    val fields = fieldsToInclude(FieldSpecification.parse(qp.fields), Set("validfrom", "validto", "numberofseasons"))
     List(RainfallIDFSource(
       name,
-      if (fieldsSet.isEmpty || fieldsSet.contains("validfrom")) Some("1957-01-01T00:00:00Z") else None,
-      if (fieldsSet.isEmpty || fieldsSet.contains("validto")) Some("2016-01-01T00:00:00Z") else None,
-      if (fieldsSet.isEmpty || fieldsSet.contains("numberofseasons")) Some(59) else None))
+      if (fields.contains("validfrom")) Some(validFrom) else None,
+      if (fields.contains("validto")) Some(validTo) else None,
+      if (fields.contains("numberofseasons")) Some(numberOfSeasons) else None))
   }
-  // scalastyle:on magic.number
 }
 
 //$COVERAGE-ON$
