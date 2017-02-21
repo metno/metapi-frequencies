@@ -44,7 +44,7 @@ class GridIDFAccess extends ProdIDFAccess {
   private val gridExtractor: IDFExtractor = {
     val confParam = "idf.netcdf.basedir"
     current.configuration.getString(confParam) match {
-      case Some(baseDir) => IDFExtractor.createFromBaseDir(s"$baseDir/${GridIDFAccess.diskName}")
+      case Some(baseDir) => IDFExtractor.createFromBaseDir(s"$baseDir/${IDFGridConfig.diskName}")
       case None => throw new Exception(s"Configuration parameter for gridded data base directory not found: $confParam")
     }
   }
@@ -83,7 +83,7 @@ class GridIDFAccess extends ProdIDFAccess {
           qp.sources.get,
           Some(point),
           None, // operatingPeriods (n/a)
-          if (fields.contains("numberofseasons")) Some(GridIDFAccess.numberOfSeasons) else None,
+          if (fields.contains("numberofseasons")) Some(IDFGridConfig.numberOfSeasons) else None,
           if (fields.contains("unit")) Some(if (unitIsMm) "mm" else "l/s*Ha") else None,
           idfs.map(x => IDFValue(
             if (unitIsMm) {
@@ -116,14 +116,6 @@ class GridIDFAccess extends ProdIDFAccess {
 
 
 object GridIDFAccess {
-  // WARNING: Hard-coded values may need to be updated upon changes to source data.
-  def name: String = "idf_bma1km_v1"
-  def diskName: String = "idf_grid_interpolated_1km" // TBD: use name for diskName once directory has been renamed to the former
-  def validFrom: String = "1957-01-01T00:00:00Z"
-  def validTo: String = "2016-01-01T00:00:00Z"
-  // scalastyle:off magic.number
-  def numberOfSeasons: Int = 59
-  // scalastyle:on magic.number
 
   /**
     * Generates fields to include in the final result.
@@ -145,10 +137,10 @@ object GridIDFAccess {
   def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
     val fields = fieldsToInclude(FieldSpecification.parse(qp.fields), Set("validfrom", "validto", "numberofseasons"))
     List(RainfallIDFSource(
-      name,
-      if (fields.contains("validfrom")) Some(validFrom) else None,
-      if (fields.contains("validto")) Some(validTo) else None,
-      if (fields.contains("numberofseasons")) Some(numberOfSeasons) else None))
+      IDFGridConfig.name,
+      if (fields.contains("validfrom")) Some(IDFGridConfig.validFrom) else None,
+      if (fields.contains("validto")) Some(IDFGridConfig.validTo) else None,
+      if (fields.contains("numberofseasons")) Some(IDFGridConfig.numberOfSeasons) else None))
   }
 }
 

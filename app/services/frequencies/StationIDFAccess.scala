@@ -90,7 +90,7 @@ class StationIDFAccess extends ProdIDFAccess {
     // scalastyle:off cyclomatic.complexity
     def apply(qp: QueryParameters): List[RainfallIDF] = {
 
-      val stations = SourceSpecification.parse(qp.sources)
+      val stations = SourceSpecification(qp.sources).stationNumbers
       val fieldsSet = FieldSpecification.parse(qp.fields)
       val durationsSet = extractDurations(qp.durations)
       val frequenciesSet = extractFrequencies(qp.frequencies)
@@ -211,7 +211,7 @@ class StationIDFAccess extends ProdIDFAccess {
     // scalastyle:off method.length
     def apply(qp: QueryParameters): List[RainfallIDFSource] = {
 
-      val stations = SourceSpecification.parse(qp.sources)
+      val stations = SourceSpecification(qp.sources).stationNumbers
       val fieldsSet = FieldSpecification.parse(qp.fields)
 
       val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(fieldsSet, Set("validfrom", "validto", "numberofseasons"), Set("sourceid", "stnr"))

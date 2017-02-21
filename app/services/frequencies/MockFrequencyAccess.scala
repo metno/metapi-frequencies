@@ -76,14 +76,14 @@ class MockIDFAccess extends IDFAccess {
   def idfValues(qp: QueryParameters): List[RainfallIDF] = {
     extractDurations(qp.durations)
     extractFrequencies(qp.frequencies)
-
-    if (GridIDFAccess.name.toUpperCase == qp.sources.getOrElse("").toUpperCase) { // grid case
+    val srcSpec = SourceSpecification(qp.sources)
+    if (srcSpec.idfGridNames.contains(IDFGridConfig.name)) { // grid case
       extractLocation(qp.location)
-      rainfallIDF.filter(x => GridIDFAccess.name.contains(x.sourceId))
+      rainfallIDF.filter(x => IDFGridConfig.name == x.sourceId)
     } else { // station case
-      val stations = SourceSpecification.parse(qp.sources)
+      val stationNumbers = srcSpec.stationNumbers
       FieldSpecification.parse(qp.fields)
-      rainfallIDF.filter(x => stations.length == 0 || stations.contains(x.sourceId.toUpperCase))
+      rainfallIDF.filter(x => stationNumbers.length == 0 || stationNumbers.contains(x.sourceId))
     }
   }
 
@@ -118,13 +118,13 @@ class MockIDFAccess extends IDFAccess {
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
     extractDurations(qp.durations)
     extractFrequencies(qp.frequencies)
-
-    if (GridIDFAccess.name.toUpperCase == qp.sources.getOrElse("").toUpperCase) { // grid case
-      rainfallIDFSources.filter(x => GridIDFAccess.name.contains(x.sourceId))
+    val srcSpec = SourceSpecification(qp.sources)
+    if (srcSpec.idfGridNames.contains(IDFGridConfig.name)) { // grid case
+      rainfallIDFSources.filter(x => IDFGridConfig.name == x.sourceId)
     } else { // station case
-      val stations = SourceSpecification.parse(qp.sources)
+      val stationNumbers = srcSpec.stationNumbers
       FieldSpecification.parse(qp.fields)
-      rainfallIDFSources.filter(x => stations.length == 0 || stations.contains(x.sourceId.toUpperCase))
+      rainfallIDFSources.filter(x => stationNumbers.length == 0 || stationNumbers.contains(x.sourceId))
     }
   }
 

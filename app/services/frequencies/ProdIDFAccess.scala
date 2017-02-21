@@ -76,12 +76,12 @@ object ProdIDFAccess {
     */
   def selectImplementation(qp: QueryParameters, gridRequiresLocation: Boolean = true): ProdIDFAccess = {
     val reqGridName = qp.sources.getOrElse("")
-    val gridNameMatch = GridIDFAccess.name.toUpperCase == reqGridName.toUpperCase
+    val gridNameMatch = IDFGridConfig.name.toUpperCase == reqGridName.toUpperCase
 
     if (gridRequiresLocation) {
       // assume grid case is requested iff location is specified or grid name matches
       if (qp.location.isDefined) {
-        if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: $reqGridName, expected: ${GridIDFAccess.name}")
+        if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: $reqGridName, expected: ${IDFGridConfig.name}")
         gridAccess
       } else if (gridNameMatch) {
         throw new BadRequestException("no location found for gridded dataset")
