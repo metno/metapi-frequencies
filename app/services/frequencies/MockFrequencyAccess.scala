@@ -105,12 +105,12 @@ class MockIDFAccess extends IDFAccess {
 
     var sources = List[RainfallIDFSource]()
 
-    if (includeStationSources(srcSpec)) { // type 1
+    if (srcSpec.includeStationSources) { // type 1
       val stationIds = srcSpec.stationNumbers
       sources = sources ++ rainfallIDFStationSources.filter(s => stationIds.isEmpty || stationIds.contains(s.sourceId))
     }
 
-    if (includeIdfGridSources(srcSpec)) { // type 2
+    if (srcSpec.includeIdfGridSources) { // type 2
       val idfGridIds = srcSpec.idfGridNames
       sources = sources ++ rainfallIDFGridSources.filter(s => idfGridIds.isEmpty || idfGridIds.contains(s.sourceId))
     }

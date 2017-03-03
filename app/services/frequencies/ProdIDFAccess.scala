@@ -56,11 +56,11 @@ class ProdIDFAccess extends IDFAccess {
 
     var sources = List[RainfallIDFSource]()
 
-    if (includeStationSources(srcSpec)) { // type 1
+    if (srcSpec.includeStationSources) { // type 1
       sources = sources ++ ProdIDFAccess.stationAccess.idfSources(qp)
     }
 
-    if (includeIdfGridSources(srcSpec)) { // type 2
+    if (srcSpec.includeIdfGridSources) { // type 2
       sources = sources ++ ProdIDFAccess.gridAccess.idfSources(qp)
     }
 
