@@ -109,9 +109,11 @@ class GridIDFAccess extends ProdIDFAccess {
 
   override def availableFrequencies: Set[Int] = gridExtractor.availableFrequencies
 
-  protected override def valuesNotFoundReason: String = "Could not find rainfall IDF data at this location in the gridded data"
+  protected override def valuesNotFoundReason: String =
+    "Could not find rainfall IDF data at this location in the gridded data and/or for this combination of durations and frequencies"
 
-  protected override def valuesNotFoundHelp: String = "Ensure that the location is over a region where IDF data exists"
+  protected override def valuesNotFoundHelp: String =
+    "Ensure that the location is over a region where IDF data exists and that the combination of durations and frequencies is valid"
 }
 
 
