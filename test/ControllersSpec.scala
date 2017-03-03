@@ -31,6 +31,9 @@ import play.api.test.Helpers._
 import play.api.libs.json._
 import TestUtil._
 import scala.concurrent.Future
+import TestUtil._
+import no.met.data._
+
 
 // scalastyle:off magic.number
 /*
@@ -145,7 +148,23 @@ class ControllersSpec extends Specification {
       val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1")).get
       status(response) must equalTo(BAD_REQUEST)
     }
+
+    "test gridded dataset valid location" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10 60)")).get
+      status(response) must equalTo(OK)
+    }
+
+    "test gridded dataset invalid location 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10)")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "test gridded dataset invalid location 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=foobar")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
   }
+
 
   "metapi /frequencies/rainfall/availableSources" should {
 
@@ -200,20 +219,71 @@ class ControllersSpec extends Specification {
       status(response) must equalTo(OK)
     }
 
-    "test gridded dataset valid location" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10 60)")).get
+    "allow matching type 1 (1)" in new WithApplication(TestUtil.app) {
+      val id = "18701"
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=SN${id}&types=SensorSystem")).get
       status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}$id${'"'}")
     }
 
-    "test gridded dataset invalid location 1" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10)")).get
+    "allow matching type 1 (2)" in new WithApplication(TestUtil.app) {
+      val id = "18701"
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=SN${id}&types=SensorSystem,InterpolatedDataset")).get
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}$id${'"'}")
+    }
+
+    "allow matching type 2 (1)" in new WithApplication(TestUtil.app) {
+      val id = IDFGridConfig.name
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=${id}&types=InterpolatedDataset")).get
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}$id${'"'}")
+    }
+
+    "allow matching type 2 (2)" in new WithApplication(TestUtil.app) {
+      val id = IDFGridConfig.name
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=${id}&types=SensorSystem,InterpolatedDataset")).get
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}$id${'"'}")
+    }
+
+    "fail on specifying unsupported type" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?types=foobar")).get
       status(response) must equalTo(BAD_REQUEST)
     }
 
-    "test gridded dataset invalid location 2" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=foobar")).get
+    "fail on specifying unsupported type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=SN18701&types=SensorSystem,foobar")).get
       status(response) must equalTo(BAD_REQUEST)
     }
+
+    "fail on specifying unsupported type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=${IDFGridConfig.name}&types=InterpolatedDataset,foobar")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on requesting wrong type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=${IDFGridConfig.name}&types=SensorSystem")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on requesting wrong type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/rainfall/availableSources/v0.jsonld?sources=SN18701&types=InterpolatedDataset")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "return only specific type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfall/availableSources/v0.jsonld?types=SensorSystem")).get
+      contentAsString(response) must contain (s"${'"'}18701${'"'}")
+      contentAsString(response) must not contain s"${'"'}${IDFGridConfig.name}${'"'}"
+    }
+
+    "return only specific type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/rainfall/availableSources/v0.jsonld?types=InterpolatedDataset")).get
+      contentAsString(response) must not contain s"${'"'}18701${'"'}"
+      contentAsString(response) must contain (s"${'"'}${IDFGridConfig.name}${'"'}")
+    }
+
   }
 }
 

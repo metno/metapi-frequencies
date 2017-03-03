@@ -53,9 +53,9 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getRainfallIDF( // scalastyle:ignore public.methods.have.type
     // scalastyle:off line.size.limit
-    @ApiParam(value = """The MET API source ID(s) that you want IDF data for. Enter either a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or the name of a gridded dataset. If left out, IDF data for all available station sources is returned."""
+    @ApiParam(value = "The MET API source ID(s) that you want IDF data for. Enter either a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or the name of a gridded dataset. If left out, IDF data for all available station sources is returned."
     ) sources: Option[String],
-    @ApiParam(value = """The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned."""
+    @ApiParam(value = "The geographic position from which to get IDF data in case of a gridded dataset. Format: POINT(&lt;longitude degrees&gt; &lt;latitude degrees&gt). Data from the nearest grid point is returned."
     ) location: Option[String],
     @ApiParam(value = "The MET API IDF duration(s), in minutes, that you want IDF data for. Enter a comma-separated list to select multiple durations.")
               durations: Option[String],
@@ -72,7 +72,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     // scalastyle:on line.size.limit
 
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
-    val queryParams = QueryParameters(sources, fields, location, durations, frequencies, unit)
+    val queryParams = QueryParameters(sources, None, fields, location, durations, frequencies, unit)
 
     Try  {
       // ensure that the query string contains supported fields only
@@ -116,6 +116,8 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     // scalastyle:off line.size.limit
     @ApiParam(value = "The MET API source ID(s) that you want information for. Enter either a comma-separated list of one or more stations (each of the form SN&lt;number&gt;[:&lt;number&gt;|all]), or the name of a gridded dataset. If left out, information for all available sources is returned.")
     sources: Option[String],
+    @ApiParam(value = "The type(s) of MET API source that you want information for. Enter a comma-separated list to select multiple types.")
+    types: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. The sourceId attribute will always be returned in the query result. Leaving this parameter empty returns all attributes; otherwise only those properties listed will be visible in the result set (in addition to the sourceId); e.g.: validFrom,numberOfSeasons will show only sourceId, validFrom, and numberOfSeasons in the response.")
     fields: Option[String],
     @ApiParam(value = "The output format of the result.",
@@ -128,9 +130,9 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
       val fieldList = FieldSpecification.parse(fields)
       Try  {
         // ensure that the query string contains supported fields only
-        QueryStringUtil.ensureSubset(Set("sources", "fields"), request.queryString.keySet)
+        QueryStringUtil.ensureSubset(Set("sources", "types", "fields"), request.queryString.keySet)
 
-        idfAccess.idfSources(QueryParameters(sources, fields))
+        idfAccess.idfSources(QueryParameters(sources, types, fields))
 
       } match {
         case Success(data) =>

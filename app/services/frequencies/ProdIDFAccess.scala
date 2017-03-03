@@ -51,15 +51,42 @@ class ProdIDFAccess extends IDFAccess {
     * are returned.
     */
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
-    qp.sources match {
-      case Some(_) => ProdIDFAccess.selectImplementation(qp, false).idfSources(qp) // get available sources for one type only
-      case None => ProdIDFAccess.gridAccess.idfSources(qp) ++ ProdIDFAccess.stationAccess.idfSources(qp) // get available sources for both types
+
+    val srcSpec = SourceSpecification(qp.sources, qp.types)
+
+    var sources = List[RainfallIDFSource]()
+
+    if (includeStationSources(srcSpec)) { // type 1
+      sources = sources ++ ProdIDFAccess.stationAccess.idfSources(qp)
     }
+
+    if (includeIdfGridSources(srcSpec)) { // type 2
+      sources = sources ++ ProdIDFAccess.gridAccess.idfSources(qp)
+    }
+
+    // type 3 ...
+
+    sources
   }
 
   override def valuesNotFoundReason(qp: QueryParameters): String = ProdIDFAccess.selectImplementation(qp).valuesNotFoundReason
 
   override def valuesNotFoundHelp(qp: QueryParameters): String = ProdIDFAccess.selectImplementation(qp).valuesNotFoundHelp
+
+  protected def typeAllowed(srcSpec: SourceSpecification): Boolean = false
+  protected def typeName: String = ""
+
+  /**
+    * Returns this object if it is valid according to srcSpec, otherwise throws BadRequestException.
+    */
+  protected def validate(srcSpec: Option[SourceSpecification]): ProdIDFAccess = {
+    srcSpec match {
+      case Some(x) =>
+        if (typeAllowed(x)) this else throw new BadRequestException(s"type $typeName not allowed according to the 'types' query parameter")
+      case None => this
+    }
+  }
+
 }
 
 
@@ -71,10 +98,11 @@ object ProdIDFAccess {
   lazy val gridAccess = new GridIDFAccess
   lazy val stationAccess = new StationIDFAccess
 
+
   /**
     * Uses the sources query parameter to return either the gridded data implementation or the station implementation.
     */
-  def selectImplementation(qp: QueryParameters, gridRequiresLocation: Boolean = true): ProdIDFAccess = {
+  def selectImplementation(qp: QueryParameters, srcSpec: Option[SourceSpecification] = None, gridRequiresLocation: Boolean = true): ProdIDFAccess = {
     val reqGridName = qp.sources.getOrElse("")
     val gridNameMatch = IDFGridConfig.name.toUpperCase == reqGridName.toUpperCase
 
@@ -82,16 +110,16 @@ object ProdIDFAccess {
       // assume grid case is requested iff location is specified or grid name matches
       if (qp.location.isDefined) {
         if (!gridNameMatch) throw new BadRequestException(s"invalid gridded dataset: $reqGridName, expected: ${IDFGridConfig.name}")
-        gridAccess
+        gridAccess.validate(srcSpec)
       } else if (gridNameMatch) {
         throw new BadRequestException("no location found for gridded dataset")
       } else {
-        stationAccess
+        stationAccess.validate(srcSpec)
       }
     } else if (gridNameMatch) {
-      gridAccess
+      gridAccess.validate(srcSpec)
     } else {
-      stationAccess
+      stationAccess.validate(srcSpec)
     }
   }
 }

@@ -289,6 +289,9 @@ class StationIDFAccess extends ProdIDFAccess {
 
   protected override def valuesNotFoundHelp: String =
     "Ensure that rainfall IDF data exists for at least one station source id and that the combination of durations and frequencies is valid"
+
+  protected override def typeAllowed(srcSpec: SourceSpecification): Boolean = srcSpec.typeAllowed(StationConfig.typeName)
+  protected override def typeName: String = StationConfig.typeName
 }
 
 //$COVERAGE-ON$

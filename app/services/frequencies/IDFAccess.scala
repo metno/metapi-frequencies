@@ -34,7 +34,7 @@ import no.met.geometry._
 /**
  * Holds query string parameters from the original request.
  */
-case class QueryParameters(sources: Option[String] = None, fields: Option[String] = None, location: Option[String] = None,
+case class QueryParameters(sources: Option[String] = None, types: Option[String] = None, fields: Option[String] = None, location: Option[String] = None,
   durations: Option[String] = None, frequencies: Option[String] = None, unit: Option[String] = None)
 
 
@@ -147,4 +147,16 @@ trait IDFAccess {
       case Failure(_) => throwException
     }
   }
+
+  // The following functions return true iff the source type in question is to be included in the output. (### NOTE: identical to functions in sources
+  // module; consider moving to SourceSpecification in util-module ... TBD)
+
+  protected def includeStationSources(srcSpec: SourceSpecification): Boolean = // type 1
+    srcSpec.typeAllowed(StationConfig.typeName) && (srcSpec.isEmpty || srcSpec.stationNames.nonEmpty)
+
+  protected def includeIdfGridSources(srcSpec: SourceSpecification): Boolean = // type 2
+    srcSpec.typeAllowed(IDFGridConfig.typeName) && (srcSpec.isEmpty || srcSpec.idfGridNames.nonEmpty)
+
+  // type 3 ...
+
 }

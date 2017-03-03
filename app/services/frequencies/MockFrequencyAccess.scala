@@ -87,45 +87,37 @@ class MockIDFAccess extends IDFAccess {
     }
   }
 
+  private val rainfallIDFStationSources = List[RainfallIDFSource](
+    new RainfallIDFSource("18700", Some("1974-05-29T12:00:00Z"), Some("1975-05-29T12:00:00Z"), Some(42)),
+    new RainfallIDFSource("18701", Some("1976-05-29T12:00:00Z"), Some("1977-05-29T12:00:00Z"), Some(42)),
+    new RainfallIDFSource("18702", Some("1978-05-29T12:00:00Z"), Some("1979-05-29T12:00:00Z"), Some(42))
+  )
 
-  private val rainfallIDFSources = List[RainfallIDFSource](
-    new RainfallIDFSource(
-      "18700",
-      Some("1974-05-29T12:00:00Z"),
-      Some("1975-05-29T12:00:00Z"),
-      Some(42)
-    ),
-    new RainfallIDFSource(
-      "18701",
-      Some("1976-05-29T12:00:00Z"),
-      Some("1977-05-29T12:00:00Z"),
-      Some(42)
-    ),
-    new RainfallIDFSource(
-      "18702",
-      Some("1978-05-29T12:00:00Z"),
-      Some("1979-05-29T12:00:00Z"),
-      Some(42)
-    ),
-    new RainfallIDFSource(
-      "idf_bma1km_v1",
-      None,
-      None,
-      None
-    )
+  private val rainfallIDFGridSources = List[RainfallIDFSource](
+    new RainfallIDFSource(IDFGridConfig.name, None, None, None)
   )
 
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
     extractDurations(qp.durations)
     extractFrequencies(qp.frequencies)
-    val srcSpec = SourceSpecification(qp.sources)
-    if (srcSpec.idfGridNames.contains(IDFGridConfig.name)) { // grid case
-      rainfallIDFSources.filter(x => IDFGridConfig.name == x.sourceId)
-    } else { // station case
-      val stationNumbers = srcSpec.stationNumbers
-      FieldSpecification.parse(qp.fields)
-      rainfallIDFSources.filter(x => stationNumbers.length == 0 || stationNumbers.contains(x.sourceId))
+
+    val srcSpec = SourceSpecification(qp.sources, qp.types)
+
+    var sources = List[RainfallIDFSource]()
+
+    if (includeStationSources(srcSpec)) { // type 1
+      val stationIds = srcSpec.stationNumbers
+      sources = sources ++ rainfallIDFStationSources.filter(s => stationIds.isEmpty || stationIds.contains(s.sourceId))
     }
+
+    if (includeIdfGridSources(srcSpec)) { // type 2
+      val idfGridIds = srcSpec.idfGridNames
+      sources = sources ++ rainfallIDFGridSources.filter(s => idfGridIds.isEmpty || idfGridIds.contains(s.sourceId))
+    }
+
+    // type 3 ...
+
+    sources
   }
 
   override def availableDurations: Set[Int] = Set(20)

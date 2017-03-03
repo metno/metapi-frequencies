@@ -114,6 +114,9 @@ class GridIDFAccess extends ProdIDFAccess {
 
   protected override def valuesNotFoundHelp: String =
     "Ensure that the location is over a region where IDF data exists and that the combination of durations and frequencies is valid"
+
+  protected override def typeAllowed(srcSpec: SourceSpecification): Boolean = srcSpec.typeAllowed(IDFGridConfig.typeName)
+  protected override def typeName: String = IDFGridConfig.typeName
 }
 
 
