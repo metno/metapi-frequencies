@@ -169,7 +169,7 @@ class StationIDFAccess extends ProdIDFAccess {
                      |GROUP BY
                      |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
                      |WHERE t3.stnr = t4.stnr AND
-                     |t4.dependency_or_not = 'I'
+                     |t4.dependency_or_not = 'D'
                      |$durationsQ
                      |$frequenciesQ
                      |ORDER BY sourceId, duration, frequency) t5
@@ -255,7 +255,7 @@ class StationIDFAccess extends ProdIDFAccess {
                      |GROUP BY
                      |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
                      |WHERE t3.stnr = t4.stnr AND
-                     |t4.dependency_or_not = 'I'
+                     |t4.dependency_or_not = 'D'
                      |) t5 ORDER BY stnr
       """.stripMargin
 
