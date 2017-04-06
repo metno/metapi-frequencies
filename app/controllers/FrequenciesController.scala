@@ -127,7 +127,6 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     // scalastyle:on line.size.limit
 
       val start = DateTime.now(DateTimeZone.UTC) // start the clock
-      val fieldList = FieldSpecification.parse(fields)
       Try  {
         // ensure that the query string contains supported fields only
         QueryStringUtil.ensureSubset(Set("sources", "types", "fields"), request.queryString.keySet)
