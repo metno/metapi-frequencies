@@ -140,27 +140,27 @@ class ControllersSpec extends Specification {
     }
 
     "test gridded dataset valid request" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10.75 59.95)")).get
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km&location=POINT(10.75 59.95)")).get
       status(response) must equalTo(OK)
     }
 
     "test gridded dataset omit location parameter" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1")).get
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km")).get
       status(response) must equalTo(BAD_REQUEST)
     }
 
     "test gridded dataset valid location" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10 60)")).get
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km&location=POINT(10 60)")).get
       status(response) must equalTo(OK)
     }
 
     "test gridded dataset invalid location 1" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=POINT(10)")).get
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km&location=POINT(10)")).get
       status(response) must equalTo(BAD_REQUEST)
     }
 
     "test gridded dataset invalid location 2" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km_v1&location=foobar")).get
+      val response = route(FakeRequest(GET, "/rainfall/v0.jsonld?sources=idf_bma1km&location=foobar")).get
       status(response) must equalTo(BAD_REQUEST)
     }
   }
@@ -215,7 +215,7 @@ class ControllersSpec extends Specification {
     }
 
     "test gridded dataset supported name" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/rainfall/availableSources/v0.jsonld?sources=idf_bma1km_v1")).get
+      val response = route(FakeRequest(GET, "/rainfall/availableSources/v0.jsonld?sources=idf_bma1km")).get
       status(response) must equalTo(OK)
     }
 

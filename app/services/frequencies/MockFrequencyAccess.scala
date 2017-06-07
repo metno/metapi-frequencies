@@ -41,6 +41,7 @@ class MockIDFAccess extends IDFAccess {
   private val rainfallIDF = List[RainfallIDF](
     new RainfallIDF(
       "18700",
+      None,
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -49,6 +50,7 @@ class MockIDFAccess extends IDFAccess {
     ),
     new RainfallIDF(
       "18701",
+      None,
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -57,6 +59,7 @@ class MockIDFAccess extends IDFAccess {
     ),
     new RainfallIDF(
       "18702",
+      None,
       Some(Point("Point", Seq(10.54, 60.1))),
       Some(Seq("1974-05-29T12:00:00Z/1977-09-03T06:00:00Z", "1982-06-01T12:00:00/2016-09-08T12:00:00Z")),
       Some(42),
@@ -64,7 +67,8 @@ class MockIDFAccess extends IDFAccess {
       Seq(IDFValue(322.8f, 2.0f, 5), IDFValue(312.8f, 5.2f, 5))
     ),
     new RainfallIDF(
-      "idf_bma1km_v1",
+      IDFGridConfig.name,
+      Some("1"),
       Some(Point("Point", Seq(10.54, 60.1))),
       None,
       None,
@@ -88,13 +92,13 @@ class MockIDFAccess extends IDFAccess {
   }
 
   private val rainfallIDFStationSources = List[RainfallIDFSource](
-    new RainfallIDFSource("18700", Some("1974-05-29T12:00:00Z"), Some("1975-05-29T12:00:00Z"), Some(42)),
-    new RainfallIDFSource("18701", Some("1976-05-29T12:00:00Z"), Some("1977-05-29T12:00:00Z"), Some(42)),
-    new RainfallIDFSource("18702", Some("1978-05-29T12:00:00Z"), Some("1979-05-29T12:00:00Z"), Some(42))
+    new RainfallIDFSource("18700", None, Some("1974-05-29T12:00:00Z"), Some("1975-05-29T12:00:00Z"), Some(42)),
+    new RainfallIDFSource("18701", None, Some("1976-05-29T12:00:00Z"), Some("1977-05-29T12:00:00Z"), Some(42)),
+    new RainfallIDFSource("18702", None, Some("1978-05-29T12:00:00Z"), Some("1979-05-29T12:00:00Z"), Some(42))
   )
 
   private val rainfallIDFGridSources = List[RainfallIDFSource](
-    new RainfallIDFSource(IDFGridConfig.name, None, None, None)
+    new RainfallIDFSource(IDFGridConfig.name, Some("1"), None, None, None)
   )
 
   def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {

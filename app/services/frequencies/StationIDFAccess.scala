@@ -73,7 +73,9 @@ class StationIDFAccess extends ProdIDFAccess {
         get[Double]("duration") ~
         get[Int]("frequency") map {
         case id~operatingPeriods~nSeasons~unit~intensity~duration~frequency
-        => RainfallIDF(id,
+        => RainfallIDF(
+          id,
+          None,
           None,
           if (operatingPeriods.isEmpty) {
             None
@@ -204,7 +206,7 @@ class StationIDFAccess extends ProdIDFAccess {
         get[Option[String]]("validto") ~
         get[Option[Int]]("numberofseasons") map {
         case id~validFrom~validTo~nSeasons
-        => RainfallIDFSource(id, validFrom, validTo, nSeasons)
+        => RainfallIDFSource(id, None, validFrom, validTo, nSeasons)
       }
     }
 

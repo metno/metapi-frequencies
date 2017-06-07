@@ -85,6 +85,10 @@ class IDFExtractor(sources: Seq[DataExtractor]) {
   def availableFrequencies: Set[Int] = {
     extractor.availableFrequencies
   }
+
+  def version: String = {
+    "1" // ### hard-coded for now; will eventually be looked up in the data source
+  }
 }
 
 

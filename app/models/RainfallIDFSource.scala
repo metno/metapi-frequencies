@@ -55,6 +55,7 @@ extends BasicResponse(
 @ApiModel(description="Metadata for a single rainfall IDF source.")
 case class RainfallIDFSource(
     @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") sourceId: String,
+    @(ApiModelProperty @field)(value="The version of the source (if applicable).", example="1") version: Option[String],
     @(ApiModelProperty @field)(value="Start of the earliest operating period of the source.", example="[\"1974-05-29T12:00:00Z\"]") validFrom: Option[String],
     @(ApiModelProperty @field)(value="End of the latest operating period of the source.", example="[\"2016-09-08T12:00:00Z\"]") validTo: Option[String],
     @(ApiModelProperty @field)(value="The number of seasons the source has been operational.", example="42") numberOfSeasons: Option[Int]

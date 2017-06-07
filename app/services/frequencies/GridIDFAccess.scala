@@ -49,6 +49,23 @@ class GridIDFAccess extends ProdIDFAccess {
     }
   }
 
+  /**
+    * Generates fields to include in the final result.
+    * @param optFieldsReq Requested optional fields (i.e. specified in the query parameter 'fields'). Note: an empty set means "all fields".
+    * @param optFieldsSup Supported optional fields.
+    * @return A set of fields.
+    */
+  private def fieldsToInclude(optFieldsReq: Set[String], optFieldsSup: Set[String]): Set[String] = {
+    // ensure that all requested optional fields are supported
+    val unsupFields = optFieldsReq -- optFieldsSup
+    if (unsupFields.nonEmpty) {
+      throw new BadRequestException(s"Unsupported fields: ${unsupFields.mkString(",")}", Some(s"Supported fields: ${optFieldsSup.mkString(", ")}"))
+    }
+
+    // return either all supported fields or those explicitly requested
+    if (optFieldsReq.isEmpty) optFieldsSup else optFieldsReq
+  }
+
   // scalastyle:off cyclomatic.complexity
   override def idfValues(qp: QueryParameters): List[RainfallIDF] = {
 
@@ -78,9 +95,10 @@ class GridIDFAccess extends ProdIDFAccess {
     idfs match {
       case x if x.isEmpty => List[RainfallIDF]()
       case _ => {
-        val fields = GridIDFAccess.fieldsToInclude(FieldSpecification.parse(qp.fields), Set("numberofseasons", "unit"))
+        val fields = fieldsToInclude(FieldSpecification.parse(qp.fields), Set("numberofseasons", "unit"))
         List(RainfallIDF(
           qp.sources.get,
+          Some(gridExtractor.version),
           Some(point),
           None, // operatingPeriods (n/a)
           if (fields.contains("numberofseasons")) Some(IDFGridConfig.numberOfSeasons) else None,
@@ -102,8 +120,15 @@ class GridIDFAccess extends ProdIDFAccess {
   }
   // scalastyle:on cyclomatic.complexity
 
-
-  override def idfSources(qp: QueryParameters): List[RainfallIDFSource] = GridIDFAccess.availableSources(qp)
+  override def idfSources(qp: QueryParameters): List[RainfallIDFSource] = {
+    val fields = fieldsToInclude(FieldSpecification.parse(qp.fields), Set("validfrom", "validto", "numberofseasons"))
+    List(RainfallIDFSource(
+      IDFGridConfig.name,
+      Some(gridExtractor.version),
+      if (fields.contains("validfrom")) Some(IDFGridConfig.validFrom) else None,
+      if (fields.contains("validto")) Some(IDFGridConfig.validTo) else None,
+      if (fields.contains("numberofseasons")) Some(IDFGridConfig.numberOfSeasons) else None))
+  }
 
   override def availableDurations: Set[Int] = gridExtractor.availableDurations
 
@@ -117,36 +142,6 @@ class GridIDFAccess extends ProdIDFAccess {
 
   protected override def typeAllowed(srcSpec: SourceSpecification): Boolean = srcSpec.typeAllowed(IDFGridConfig.typeName)
   protected override def typeName: String = IDFGridConfig.typeName
-}
-
-
-object GridIDFAccess {
-
-  /**
-    * Generates fields to include in the final result.
-    * @param optFieldsReq Requested optional fields (i.e. specified in the query parameter 'fields'). Note: an empty set means "all fields".
-    * @param optFieldsSup Supported optional fields.
-    * @return A set of fields.
-    */
-  private def fieldsToInclude(optFieldsReq: Set[String], optFieldsSup: Set[String]): Set[String] = {
-    // ensure that all requested optional fields are supported
-    val unsupFields = optFieldsReq -- optFieldsSup
-    if (unsupFields.nonEmpty) {
-      throw new BadRequestException(s"Unsupported fields: ${unsupFields.mkString(",")}", Some(s"Supported fields: ${optFieldsSup.mkString(", ")}"))
-    }
-
-    // return either all supported fields or those explicitly requested
-    if (optFieldsReq.isEmpty) optFieldsSup else optFieldsReq
-  }
-
-  def availableSources(qp: QueryParameters): List[RainfallIDFSource] = {
-    val fields = fieldsToInclude(FieldSpecification.parse(qp.fields), Set("validfrom", "validto", "numberofseasons"))
-    List(RainfallIDFSource(
-      IDFGridConfig.name,
-      if (fields.contains("validfrom")) Some(IDFGridConfig.validFrom) else None,
-      if (fields.contains("validto")) Some(IDFGridConfig.validTo) else None,
-      if (fields.contains("numberofseasons")) Some(IDFGridConfig.numberOfSeasons) else None))
-  }
 }
 
 //$COVERAGE-ON$
