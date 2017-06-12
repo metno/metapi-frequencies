@@ -41,6 +41,11 @@ import services.frequencies._
 @Api(value = "frequencies")
 class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
 
+  // ### This function makes certain clients backwards compatible. Remove once those clients have been implemented by extracting the IDF grid names
+  // dynamically from the sources/ endpoint instead of hard-coding the name.
+  private def backwardsCompatibleWorkaround(sources: Option[String]): Option[String] = Some(sources.getOrElse("").replace("idf_bma1km_v1", "idf_bma1km"))
+
+
   @ApiOperation(
     value = "Get rainfall IDF data.",
     notes = "Get rainfall IDF data. To be expanded.",
@@ -72,7 +77,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
     // scalastyle:on line.size.limit
 
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
-    val queryParams = QueryParameters(sources, None, fields, location, durations, frequencies, unit)
+    val queryParams = QueryParameters(backwardsCompatibleWorkaround(sources), None, fields, location, durations, frequencies, unit)
 
     Try  {
       // ensure that the query string contains supported fields only
@@ -131,7 +136,7 @@ class FrequenciesController @Inject()(idfAccess: IDFAccess) extends Controller {
         // ensure that the query string contains supported fields only
         QueryStringUtil.ensureSubset(Set("sources", "types", "fields"), request.queryString.keySet)
 
-        idfAccess.idfSources(QueryParameters(sources, types, fields))
+        idfAccess.idfSources(QueryParameters(backwardsCompatibleWorkaround(sources), types, fields))
 
       } match {
         case Success(data) =>
