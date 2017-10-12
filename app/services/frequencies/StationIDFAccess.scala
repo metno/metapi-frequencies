@@ -69,7 +69,7 @@ class StationIDFAccess extends ProdIDFAccess {
     DB.withConnection("kdvh") { implicit connection =>
       val query =
         """
-          |SELECT stnr AS stid, to_char(min(fdato), 'YYYY-MM-DD') AS validFrom, to_char(max(tdato), 'YYYY-MM-DD') AS validTo
+          |SELECT stnr AS stid, to_char(min(fdato), 'YYYY-MM-DDT00:00:00Z') AS validFrom, to_char(max(tdato), 'YYYY-MM-DDT00:00:00Z') AS validTo
           |FROM t_elem_pdata
           |GROUP BY stnr""".stripMargin
       SQL(query).as(parser *).map(x => x._1 -> (x._2, x._3)).toMap
