@@ -33,6 +33,7 @@ import anorm.SqlParser._
 import models.{IDFValue, RainfallIDF, RainfallIDFSource}
 import no.met.data._
 import scala.collection.mutable.MutableList
+import scala.util.{ Try, Success, Failure }
 
 
 //$COVERAGE-OFF$ Not testing database queries
@@ -192,6 +193,11 @@ class StationIDFAccess extends ProdIDFAccess {
           numberOfSeasons = if (showNumberOfSeasons) r.numberOfSeasons else None,
           unit = if (showUnit) r.unit else None
         ))
+        .sortBy(r =>
+          Try(r.sourceId.replace("SN", "").toInt) match {
+            case Success(v) => v // sort by integer value if possible
+            case _ => 0 // otherwise, don't sort
+          })
     }
   }
 
@@ -233,6 +239,11 @@ class StationIDFAccess extends ProdIDFAccess {
           validTo = if (showValidTo) s.validTo else None,
           numberOfSeasons = if (showNumberOfSeasons) s.numberOfSeasons else None
         ))
+        .sortBy(s =>
+          Try(s.sourceId.replace("SN", "").toInt) match {
+            case Success(v) => v // sort by integer value if possible
+            case _ => 0 // otherwise, don't sort
+          })
     }
   }
 
