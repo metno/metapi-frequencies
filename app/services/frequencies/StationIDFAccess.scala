@@ -161,7 +161,8 @@ class StationIDFAccess extends ProdIDFAccess {
       }
 
       (nSeasons.keys ++ opPeriods.keys ++ idfs.keys).toList
-        .filter(stid => stations.isEmpty || stations.contains(stid.toString))
+        .filter(stid => idfs.contains(stid)) // only allow stations with valid IDFs
+        .filter(stid => stations.isEmpty || stations.contains(stid.toString)) // allow either all remaining stations or the specified ones
         .map(stid => {
           val sourceId = s"SN$stid"
           val version = None
@@ -224,9 +225,11 @@ class StationIDFAccess extends ProdIDFAccess {
 
       val nSeasons: Map[Int, Int] = getNSeasonsPerStation
       val validPeriod: Map[Int, (String, String)] = getValidPeriodPerStation
+      val idfs: Map[Int, List[IDF]] = getIDFsPerStation
 
       (nSeasons.keys ++ validPeriod.keys).toList
-        .filter(stid => stations.isEmpty || stations.contains(stid.toString))
+        .filter(stid => idfs.contains(stid)) // only allow stations with valid IDFs
+        .filter(stid => stations.isEmpty || stations.contains(stid.toString)) // allow either all remaining stations or the specified ones
         .map(stid => {
           val sourceId = s"SN$stid"
           val version = None
