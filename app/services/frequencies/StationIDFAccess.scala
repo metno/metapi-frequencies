@@ -32,6 +32,7 @@ import anorm._
 import anorm.SqlParser._
 import models.{IDFValue, RainfallIDF, RainfallIDFSource}
 import no.met.data._
+import scala.collection.mutable.MutableList
 
 
 //$COVERAGE-OFF$ Not testing database queries
@@ -41,230 +42,197 @@ import no.met.data._
  */
 class StationIDFAccess extends ProdIDFAccess {
 
-  /**
-    * Generates fields to use in the SELECT clause.
-    * @param optFieldsReq Requested optional fields (i.e. specified in the query parameter 'fields').
-    * @param optFieldsSup Supported optional fields.
-    * @param mndFields Mandatory fields.
-    * @return A comma-separated list of fields.
-    */
-  private def getSelectQuery(optFieldsReq: Set[String], optFieldsSup: Set[String], mndFields: Set[String]): String = {
-    // ensure that all requested optional fields are supported
-    val unsupFields = optFieldsReq -- optFieldsSup
-    if (unsupFields.nonEmpty) {
-      throw new BadRequestException(s"Unsupported fields: ${unsupFields.mkString(",")}", Some(s"Supported fields: ${optFieldsSup.mkString(", ")}"))
+  private def getNSeasonsPerStation: Map[Int, Int] = {
+    val parser: RowParser[(Int, Int)] = {
+      get[Int]("stid") ~
+        get[Int]("nseasons") map {
+        case stid ~ nseasons => (stid, nseasons)
+      }
     }
 
-    // ensure that unrequested optional fields are output as null values
-    val mndAndReqStr = (mndFields ++ optFieldsReq).mkString(", ") // mandatory fields and requested optional fields
-    val optFieldsUnreq = optFieldsSup -- optFieldsReq // unrequested optional fields
-    mndAndReqStr + (if (optFieldsUnreq.isEmpty) "" else ", " + optFieldsUnreq.map( x => "NULL AS " + x ).mkString(", "))
+    DB.withConnection("kdvh") { implicit connection =>
+      val query = "SELECT DISTINCT stnr AS stid, max(season) AS nseasons FROM t_rr_intensity GROUP BY stnr"
+      SQL(query).as(parser *).toMap
+    }
+  }
+
+  private def getValidPeriodPerStation: Map[Int, (String, String)] = {
+    val parser: RowParser[(Int, String, String)] = {
+      get[Int]("stid") ~
+        get[String]("validFrom") ~
+        get[String]("validTo") map {
+        case stid~validFrom~validTo => (stid, validFrom, validTo)
+      }
+    }
+
+    DB.withConnection("kdvh") { implicit connection =>
+      val query =
+        """
+          |SELECT stnr AS stid, to_char(min(fdato), 'YYYY-MM-DD') AS validFrom, to_char(max(tdato), 'YYYY-MM-DD') AS validTo
+          |FROM t_elem_pdata
+          |GROUP BY stnr""".stripMargin
+      SQL(query).as(parser *).map(x => x._1 -> (x._2, x._3)).toMap
+    }
+  }
+
+  private case class IDF(intensity: Double, duration: Int, frequency: Int)
+
+  private def getIDFsPerStation: Map[Int, List[IDF]] = {
+    val parser: RowParser[(Int, Int, Int, Double)] = {
+      get[Int]("stid") ~
+        get[Int]("duration") ~
+        get[Int]("frequency") ~
+        get[Double]("intensity") map {
+        case stid~duration~frequency~intensity => (stid, duration, frequency, intensity)
+      }
+    }
+
+    DB.withConnection("kdvh") { implicit connection =>
+      var idfs: Map[Int, MutableList[IDF]] = Map[Int, MutableList[IDF]]()
+      val query =
+        """
+          |SELECT stnr AS stid, duration, returnperiod AS frequency, litre_sec_hectar AS intensity
+          |FROM t_rr_returnperiod
+          |WHERE dependency_or_not = 'D'""".stripMargin
+      SQL(query).as(parser *).foreach(x => {
+        val stid = x._1
+        val duration = x._2
+        val frequency = x._3
+        val intensity = x._4
+        if (!idfs.contains(stid)) idfs += (stid -> MutableList[IDF]())
+        idfs(stid) += IDF(intensity, duration, frequency)
+      })
+      idfs.map(x => x._1 -> x._2.toList)
+    }
+  }
+
+  private def getOperatingPeriodsPerStation: Map[Int, Option[List[String]]] = {
+    val parser: RowParser[(Int, Option[List[String]])] = {
+      get[Int]("stid") ~
+        get[Option[List[String]]]("operatingPeriods") map {
+        case stid~operatingPeriods => (stid, operatingPeriods)
+      }
+    }
+
+    DB.withConnection("kdvh") { implicit connection =>
+      val query =
+        """
+          |SELECT
+            |stnr AS stid,
+            |array_agg(to_char(fdato, 'YYYY-MM-DDT00:00:00Z') || '/' || to_char(tdato, 'YYYY-MM-DDT00:00:00Z') ORDER BY fdato,tdato) AS operatingPeriods
+          |FROM t_elem_pdata
+          |GROUP BY stnr""".stripMargin
+      SQL(query).as(parser *).toMap
+    }
   }
 
   // Handles the 'values' case.
   private object idfValuesExec {
 
-    private val parser: RowParser[RainfallIDF] = {
-      get[String]("sourceId") ~
-        get[Option[Array[String]]]("operatingperiods") ~
-        get[Option[Int]]("numberofseasons") ~
-        get[Option[String]]("unit") ~
-        get[Double]("intensity") ~
-        get[Double]("duration") ~
-        get[Int]("frequency") map {
-        case id~operatingPeriods~nSeasons~unit~intensity~duration~frequency
-        => RainfallIDF(
-          id,
-          None,
-          None,
-          if (operatingPeriods.isEmpty) {
-            None
-          } else {
-            Some(operatingPeriods.get.toSeq.sorted)
-          },
-          nSeasons,
-          unit,
-          Seq(IDFValue(intensity, duration, frequency)))
-      }
-    }
-
-    // scalastyle:off method.length
-    // scalastyle:off cyclomatic.complexity
     def apply(qp: QueryParameters): List[RainfallIDF] = {
 
-      val stations = SourceSpecification(qp.sources).stationNumbers
-      val fieldsSet = FieldSpecification.parse(qp.fields)
-      val durationsSet = extractDurations(qp.durations)
-      val frequenciesSet = extractFrequencies(qp.frequencies)
+     val stations = SourceSpecification(qp.sources).stationNumbers
 
-      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(
-        fieldsSet, Set("operatingperiods", "numberofseasons", "unit"), Set("sourceid", "intensity", "duration", "frequency"))
+      val fields = FieldSpecification.parse(qp.fields).map(_.toLowerCase)
+      val validFields = Set("operatingPeriods", "numberOfSeasons", "unit", "values")
+      val invalidFields = fields -- validFields.map(_.toLowerCase)
+      if (invalidFields.nonEmpty) {
+        throw new BadRequestException(
+          "Invalid fields in the query parameter: " + invalidFields.mkString(","),
+          Some(s"Supported fields: ${validFields.mkString(", ")}"))
+      }
+      val showOperatingPeriods = fields.isEmpty || fields.contains("operatingperiods")
+      val showNumberOfSeasons = fields.isEmpty || fields.contains("numberofseasons")
+      val showUnit = fields.isEmpty || fields.contains("unit")
+      // note: values is always shown, but can be specified as a field to exclude other optional fields
 
-      val sourceQ =
-        if (stations.isEmpty) {
-          "TRUE"
-        } else {
-          s"stnr IN (${stations.mkString(",")})"
-        }
+      val durations = extractDurations(qp.durations)
+      val frequencies = extractFrequencies(qp.frequencies)
 
-      val durationsQ =
-        if (durationsSet.isEmpty) {
-          ""
-        } else {
-          s" AND t4.duration IN (${durationsSet.mkString(",")})"
-        }
-
-      val frequenciesQ =
-        if (frequenciesSet.isEmpty) {
-          ""
-        } else {
-          s" AND t4.returnperiod IN (${frequenciesSet.mkString(",")})"
-        }
-
-      val lsha = Array("l/s*Ha", "t4.litre_sec_hectar")
-      // the formula below is derived as follows:
-      //   l/s*Ha = lsh = litres per second per hectar
-      //   lmh = litres per minute per hectar = lsh * 60
-      //   lmd = litres per minute per square decimeter = lmh / 100000
-      //   mmm = millimetres per minute = lmd * 100 = lmh / 10000 = lsh * 60 / 10000 = lsh * 0.006
-      //   mmmd = mmm * duration = lsh * 0.006 * duration
-      val mm = Array("mm", "t4.litre_sec_hectar * 0.006 * t4.duration")
-      val unitQ = qp.unit match {
-        case None => lsha
-        case Some(x) if x == "l/s*Ha" => lsha
-        case Some(x) if x == "mm" => mm
-        case _ => {
-          throw new BadRequestException(
-            "Invalid intensity unit: " + qp.unit.get,
-            Some(s"Supported units: 'mm' and 'l/s_Ha'"))
-        }
+      val nSeasons: Map[Int, Int] = getNSeasonsPerStation
+      val opPeriods: Map[Int, Option[List[String]]] = getOperatingPeriodsPerStation
+      val idfs: Map[Int, List[IDF]] = getIDFsPerStation
+      val lsha = "l/s*Ha"
+      val mm = "mm"
+      val unit = qp.unit.getOrElse(lsha)
+      if (unit.nonEmpty && !Set(lsha, mm).contains(unit)) {
+        throw new BadRequestException("Invalid intensity unit: " + unit, Some(s"Supported units: 'mm' and 'l/s_Ha'"))
       }
 
-      val query = s"""
-                     |SELECT
-                     |$selectQ
-                     |FROM
-                     |(SELECT
-                     |'SN' || t3.stnr AS sourceId,
-                     |t3.operatingPeriods,
-                     |t3.nSeason AS numberOfSeasons,
-                     |'${unitQ(0)}' AS unit,
-                     |${unitQ(1)} AS intensity,
-                     |t4.duration,
-                     |t4.returnperiod AS frequency
-                     |FROM
-                     |(SELECT
-                     |t1.stnr, t1.operatingPeriods, t2.nSeason
-                     |FROM
-                     |(SELECT
-                     |stnr, array_agg(TO_CHAR(fdato, 'YYYY-MM-DDT00:00:00Z') || '/' || TO_CHAR(tdato, 'YYYY-MM-DDT00:00:00Z')) AS operatingPeriods
-                     |FROM
-                     |t_elem_pdata
-                     |WHERE
-                     |$sourceQ
-                     |GROUP BY stnr) t1
-                     |LEFT OUTER JOIN
-                     |(SELECT
-                     |stnr, max(season) AS nSeason
-                     |FROM
-                     |t_rr_intensity
-                     |GROUP BY
-                     |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
-                     |WHERE t3.stnr = t4.stnr AND
-                     |t4.dependency_or_not = 'D'
-                     |$durationsQ
-                     |$frequenciesQ
-                     |ORDER BY sourceId, duration, frequency) t5
-      """.stripMargin
-
-      DB.withConnection("kdvh") { implicit connection =>
-        val sqlResult = SQL(query).as( parser * )
-        // TODO: Quick and dirty implementation. Convert to idiomatic scala.
-        // List append is not an efficient implementation, so this needs to be improved.
-        var result = List[RainfallIDF]()
-        for (res <- sqlResult) {
-          if (result.nonEmpty && result.last.sourceId == res.sourceId) {
-            result.last.values = result.last.values ++ res.values
+      (nSeasons.keys ++ opPeriods.keys ++ idfs.keys).toList
+        .filter(stid => stations.isEmpty || stations.contains(stid.toString))
+        .map(stid => {
+          val sourceId = s"SN$stid"
+          val version = None
+          val geometry = None
+          val operatingPeriods = if (opPeriods.contains(stid)) Some(opPeriods(stid).get.sorted) else None
+          val numberOfSeasons = if (nSeasons.contains(stid)) Some(nSeasons(stid)) else None
+          val values = if (idfs.contains(stid)) {
+            idfs(stid)
+              .filter(idf => (durations.isEmpty || durations.contains(idf.duration)) && (frequencies.isEmpty || frequencies.contains(idf.frequency)))
+              .map(idf =>
+                IDFValue(
+                  // the formula below is derived as follows:
+                  //   l/s*Ha = lsh = litres per second per hectar
+                  //   lmh = litres per minute per hectar = lsh * 60
+                  //   lmd = litres per minute per square decimeter = lmh / 100000
+                  //   mmm = millimetres per minute = lmd * 100 = lmh / 10000 = lsh * 60 / 10000 = lsh * 0.006
+                  //   mmmd = mmm * duration = lsh * 0.006 * duration
+                  if (unit == lsha) idf.intensity else idf.intensity * 0.006 * idf.duration,
+                  idf.duration,
+                  idf.frequency)
+              )
           } else {
-            result = result :+ res
+            Seq[IDFValue]()
           }
-        }
-        result
-      }
+          RainfallIDF(sourceId, version, geometry, operatingPeriods, numberOfSeasons, Some(unit), values)
+        })
+        .map(r => r.copy( // remove fields from output as required
+          operatingPeriods = if (showOperatingPeriods) r.operatingPeriods else None,
+          numberOfSeasons = if (showNumberOfSeasons) r.numberOfSeasons else None,
+          unit = if (showUnit) r.unit else None
+        ))
     }
-    // scalastyle:on method.length
-    // scalastyle:on cyclomatic.complexity
   }
 
 
   // Handles the 'sources' case.
   private object idfSourcesExec {
 
-    private val parser: RowParser[RainfallIDFSource] = {
-      get[String]("sourceId") ~
-        get[Option[String]]("validfrom") ~
-        get[Option[String]]("validto") ~
-        get[Option[Int]]("numberofseasons") map {
-        case id~validFrom~validTo~nSeasons
-        => RainfallIDFSource(id, None, validFrom, validTo, nSeasons)
-      }
-    }
-
     // scalastyle:off method.length
     def apply(qp: QueryParameters): List[RainfallIDFSource] = {
 
       val stations = SourceSpecification(qp.sources).stationNumbers
-      val fieldsSet = FieldSpecification.parse(qp.fields)
 
-      val selectQ = if (fieldsSet.isEmpty) "*" else getSelectQuery(fieldsSet, Set("validfrom", "validto", "numberofseasons"), Set("sourceid", "stnr"))
-
-      val sourceQ =
-        if (stations.isEmpty) {
-          "TRUE"
-        } else {
-          s"stnr IN (${stations.mkString(",")})"
-        }
-
-      val query = s"""
-                     |SELECT DISTINCT
-                     |$selectQ
-                     |FROM
-                     |(SELECT
-                     | t3.stnr AS stnr,
-                     |'SN' || t3.stnr AS sourceId,
-                     |t3.validFrom,
-                     |t3.validTo,
-                     |t3.nSeason AS numberOfSeasons
-                     |FROM
-                     |(SELECT
-                     |t1.stnr, t1.validFrom, t1.validTo, t2.nSeason
-                     |FROM
-                     |(SELECT
-                     |stnr,
-                     |TO_CHAR(min(fdato), 'YYYY-MM-DDT00:00:00Z') AS validFrom,
-                     |TO_CHAR(max(tdato), 'YYYY-MM-DDT00:00:00Z') AS validTo
-                     |FROM
-                     |t_elem_pdata
-                     |WHERE
-                     |$sourceQ
-
-                     |GROUP BY stnr) t1
-                     |LEFT OUTER JOIN
-                     |(SELECT
-                     |stnr, max(season) AS nSeason
-                     |FROM
-                     |t_rr_intensity
-                     |GROUP BY
-                     |stnr) t2 ON (t1.stnr = t2.stnr)) t3, t_rr_returnperiod t4
-                     |WHERE t3.stnr = t4.stnr AND
-                     |t4.dependency_or_not = 'D'
-                     |) t5 ORDER BY stnr
-      """.stripMargin
-
-
-      DB.withConnection("kdvh") { implicit connection =>
-        SQL(query).as( parser * )
+      val fields = FieldSpecification.parse(qp.fields).map(_.toLowerCase)
+      val validFields = Set("validFrom", "validTo", "numberOfSeasons")
+      val invalidFields = fields -- validFields.map(_.toLowerCase)
+      if (invalidFields.nonEmpty) {
+        throw new BadRequestException(
+          "Invalid fields in the query parameter: " + invalidFields.mkString(","),
+          Some(s"Supported fields: ${validFields.mkString(", ")}"))
       }
+      val showValidFrom = fields.isEmpty || fields.contains("validfrom")
+      val showValidTo = fields.isEmpty || fields.contains("validto")
+      val showNumberOfSeasons = fields.isEmpty || fields.contains("numberofseasons")
+
+      val nSeasons: Map[Int, Int] = getNSeasonsPerStation
+      val validPeriod: Map[Int, (String, String)] = getValidPeriodPerStation
+
+      (nSeasons.keys ++ validPeriod.keys).toList
+        .filter(stid => stations.isEmpty || stations.contains(stid.toString))
+        .map(stid => {
+          val sourceId = s"SN$stid"
+          val version = None
+          val (validFrom, validTo) = if (validPeriod.contains(stid)) { val p = validPeriod(stid); (Some(p._1), Some(p._2)) } else (None, None)
+          val numberOfSeasons = if (nSeasons.contains(stid)) Some(nSeasons(stid)) else None
+          RainfallIDFSource(sourceId, version, validFrom, validTo, numberOfSeasons)
+        })
+        .map(s => s.copy( // remove fields from output as required
+          validFrom = if (showValidFrom) s.validFrom else None,
+          validTo = if (showValidTo) s.validTo else None,
+          numberOfSeasons = if (showNumberOfSeasons) s.numberOfSeasons else None
+        ))
     }
   }
 
